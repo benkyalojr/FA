@@ -5,6 +5,10 @@ require __DIR__ . '/bootstrap.php';
 $req = new Request();
 $router = new Router();
 
+if (!empty($AVOGS_CFG['log_requests'])) {
+    Logger::info('Request', array('method' => $req->method, 'path' => $req->path));
+}
+
 // Health / root
 $router->get('/', function ($req) {
     Response::json(array('name' => "AVO'Gs API", 'status' => 'ok', 'version' => 1));

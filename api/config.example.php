@@ -28,4 +28,14 @@ return array(
 
     // Directory for uploaded checklist photos (created if missing).
     'upload_dir' => __DIR__ . '/uploads',
+
+    // --- Logging ---------------------------------------------------------
+    // File the API writes its log to (directory created if missing).
+    // Make sure the web-server user can write to this path.
+    'log_file' => __DIR__ . '/logs/api.log',
+    // Minimum level to record: debug | info | warning | error.
+    // Use 'warning' or 'error' in production to keep the log lean.
+    'log_level' => 'debug',
+    // Log a line for every incoming request (method + path).
+    'log_requests' => true,
 );

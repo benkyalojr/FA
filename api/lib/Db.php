@@ -19,18 +19,36 @@ class Db
         return db_escape($v, $nullable);
     }
 
+    /** Run a query through FA, logging failures (and the SQL) when they happen. */
+    private static function run($sql, $err)
+    {
+        $res = db_query($sql, $err);
+        if ($res === false && class_exists('Logger')) {
+            $dberr = function_exists('db_error_msg') ? db_error_msg(self::handle()) : null;
+            Logger::error('SQL failed: ' . $err, array('sql' => $sql, 'db_error' => $dberr));
+        }
+        return $res;
+    }
+
+    /** Best-effort access to FA's active db connection handle for error reporting. */
+    private static function handle()
+    {
+        global $db;
+        return isset($db) ? $db : null;
+    }
+
     /** Run a query, returning FA's result handle. */
     public static function query($sql, $err = 'API query failed')
     {
-        return db_query($sql, $err);
+        return self::run($sql, $err);
     }
 
     /** All rows as associative arrays. */
     public static function rows($sql)
     {
-        $res = db_query($sql, 'API query failed');
+        $res = self::run($sql, 'API query failed');
         $out = array();
-        while ($row = db_fetch_assoc($res)) {
+        while ($res && $row = db_fetch_assoc($res)) {
             $out[] = $row;
         }
         return $out;
@@ -39,23 +57,23 @@ class Db
     /** First row as an associative array, or null. */
     public static function row($sql)
     {
-        $res = db_query($sql, 'API query failed');
-        $row = db_fetch_assoc($res);
+        $res = self::run($sql, 'API query failed');
+        $row = $res ? db_fetch_assoc($res) : null;
         return $row ? $row : null;
     }
 
     /** First column of the first row, or null. */
     public static function val($sql)
     {
-        $res = db_query($sql, 'API query failed');
-        $row = db_fetch($res);
+        $res = self::run($sql, 'API query failed');
+        $row = $res ? db_fetch($res) : null;
         return $row ? $row[0] : null;
     }
 
     /** Run an INSERT/UPDATE/DELETE; returns last insert id for inserts. */
     public static function exec($sql)
     {
-        db_query($sql, 'API write failed');
+        self::run($sql, 'API write failed');
         return db_insert_id();
     }
 }

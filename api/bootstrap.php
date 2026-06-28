@@ -17,6 +17,51 @@ $AVOGS_CFG = require __DIR__ . '/config.php';
 error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_WARNING & ~E_STRICT);
 ini_set('display_errors', '0');
 
+// Bring up the file logger before anything else can fail, so start-up problems
+// (including FA's headless bootstrap failing) are captured.
+require_once __DIR__ . '/lib/Logger.php';
+Logger::init(
+    isset($AVOGS_CFG['log_file']) ? $AVOGS_CFG['log_file'] : (__DIR__ . '/logs/api.log'),
+    isset($AVOGS_CFG['log_level']) ? $AVOGS_CFG['log_level'] : 'debug'
+);
+
+// Capture PHP fatals/warnings that would otherwise be invisible (display_errors
+// is off above). Without this, a fatal during FA bootstrap leaves no trace.
+set_error_handler(function ($severity, $message, $file, $line) {
+    if (!(error_reporting() & $severity)) {
+        return false; // respect the suppression configured above
+    }
+    Logger::warning('PHP error: ' . $message, array('file' => $file, 'line' => $line));
+    return false; // let PHP's normal handling continue
+});
+set_exception_handler(function ($e) {
+    Logger::error('Uncaught exception: ' . $e->getMessage(), array(
+        'file' => $e->getFile(), 'line' => $e->getLine(),
+    ));
+});
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR), true)) {
+        Logger::error('PHP fatal: ' . $err['message'], array(
+            'file' => $err['file'], 'line' => $err['line'],
+        ));
+    }
+    // If FA's session.inc rendered its HTML login page and exited (service
+    // account login failed), execution never reaches the controllers. Flag it.
+    if (!defined('AVOGS_BOOTSTRAP_OK')) {
+        Logger::error('FA bootstrap did not complete: the request exited before the API ran. '
+            . 'This usually means the FA service-account login failed (FA rendered its login page) '
+            . 'or /api was not routed to api/index.php (e.g. nginx without an /api location block).');
+    }
+});
+
+Logger::debug('Bootstrapping FA', array(
+    'method' => isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : null,
+    'uri' => isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : null,
+    'company' => isset($AVOGS_CFG['fa_company']) ? $AVOGS_CFG['fa_company'] : null,
+    'service_user' => isset($AVOGS_CFG['fa_service_user']) ? $AVOGS_CFG['fa_service_user'] : null,
+));
+
 $path_to_root = $AVOGS_CFG['fa_root'];
 
 // Minimal web context FA's session.inc expects.
@@ -44,6 +89,10 @@ while (ob_get_level() > 0) {
 $_POST = $AVOGS_CLIENT_POST;
 
 if (!isset($_SESSION['wa_current_user']) || !$_SESSION['wa_current_user']->logged_in()) {
+    Logger::error('FA service-account login failed during bootstrap.', array(
+        'company' => isset($AVOGS_CFG['fa_company']) ? $AVOGS_CFG['fa_company'] : null,
+        'service_user' => isset($AVOGS_CFG['fa_service_user']) ? $AVOGS_CFG['fa_service_user'] : null,
+    ));
     http_response_code(500);
     header('Content-Type: application/json');
     echo json_encode(array('error' => array(
@@ -52,6 +101,11 @@ if (!isset($_SESSION['wa_current_user']) || !$_SESSION['wa_current_user']->logge
     )));
     exit;
 }
+
+// Reached only when FA authenticated the service account successfully; the
+// shutdown handler uses this to detect a silent early exit.
+define('AVOGS_BOOTSTRAP_OK', 1);
+Logger::debug('FA session ready', array('user' => $AVOGS_CFG['fa_service_user']));
 
 // Prefix for the app's own tables (FA prefix + avogs_), e.g. "0_avogs_".
 if (!defined('AVOGS_PREF')) {

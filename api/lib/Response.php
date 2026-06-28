@@ -26,6 +26,15 @@ class Response
             );
             $code = isset($map[$status]) ? $map[$status] : 'error';
         }
+        if (class_exists('Logger')) {
+            // 5xx are real faults; 4xx are client/validation issues worth a warning.
+            $ctx = array('status' => $status, 'code' => $code);
+            if ($status >= 500) {
+                Logger::error('Response ' . $status . ': ' . $message, $ctx);
+            } else {
+                Logger::warning('Response ' . $status . ': ' . $message, $ctx);
+            }
+        }
         self::json(array('error' => array('code' => $code, 'message' => $message)), $status);
     }
 }
