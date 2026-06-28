@@ -70,6 +70,25 @@ if (!isset($_SERVER['REMOTE_ADDR']))     $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
 if (!isset($_SERVER['HTTP_USER_AGENT'])) $_SERVER['HTTP_USER_AGENT'] = 'avogs-api';
 if (!isset($_SERVER['SERVER_NAME']))     $_SERVER['SERVER_NAME'] = 'localhost';
 
+// ── Session isolation ────────────────────────────────────────────────────────
+// FA's session cookie name is  'FA' + md5(dirname(session.inc)).
+// HTTP cookies are port-agnostic: the browser sends the same FA cookie to both
+// the web UI (e.g. :8080) and this API (e.g. :8088).  If session.inc picks up
+// that cookie it runs login_timeout() on the BROWSER's session and, when the
+// timeout fires, writes logged=false back — silently logging the web user out.
+//
+// Fix: strip any FA-style session cookie from $_COOKIE before session.inc
+// calls session_start(), so the API always creates a fresh service-account
+// session and NEVER touches the browser's session file.
+foreach ($_COOKIE as $_k => $_v) {
+    // FA session cookie names are 'FA' followed by a 32-char hex MD5.
+    if (preg_match('/^FA[0-9a-f]{32}$/i', $_k)) {
+        unset($_COOKIE[$_k]);
+    }
+}
+unset($_k, $_v);
+// ────────────────────────────────────────────────────────────────────────────
+
 // Preserve any real request form params, then hand FA the service login.
 $AVOGS_CLIENT_POST = $_POST;
 $_POST = array(
@@ -106,6 +125,13 @@ if (!isset($_SESSION['wa_current_user']) || !$_SESSION['wa_current_user']->logge
 // shutdown handler uses this to detect a silent early exit.
 define('AVOGS_BOOTSTRAP_OK', 1);
 Logger::debug('FA session ready', array('user' => $AVOGS_CFG['fa_service_user']));
+
+// Release the session write-lock now.  The API uses bearer-token auth stored
+// in the database (0_avogs_tokens), not PHP sessions, so there is no reason
+// to keep the session file locked for the entire request.  Releasing early
+// also prevents concurrent API requests from serialising on the same lock.
+// $_SESSION data is still readable after session_write_close().
+session_write_close();
 
 // Prefix for the app's own tables (FA prefix + avogs_), e.g. "0_avogs_".
 if (!defined('AVOGS_PREF')) {
