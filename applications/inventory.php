@@ -26,6 +26,10 @@ class inventory_app extends application
 			"inventory/inquiry/stock_movements.php?", 'SA_ITEMSTRANSVIEW', MENU_INQUIRY);
 		$this->add_lapp_function(1, _("Inventory Item &Status"),
 			"inventory/inquiry/stock_status.php?", 'SA_ITEMSSTATVIEW', MENU_INQUIRY);
+		$this->add_lapp_function(1, _("Shift Check-in (Opening) Inquiry"),
+			"inventory/inquiry/avogs_checkin_inquiry.php?", 'SA_ITEMSTRANSVIEW', MENU_INQUIRY);
+		$this->add_lapp_function(1, _("Shift Check-out (Closing) Inquiry"),
+			"inventory/inquiry/avogs_checkout_inquiry.php?", 'SA_ITEMSTRANSVIEW', MENU_INQUIRY);
 		$this->add_rapp_function(1, _("Inventory &Reports"),
 			"reporting/reports_main.php?Class=2", 'SA_ITEMSTRANSVIEW', MENU_REPORT);
 
@@ -38,6 +42,8 @@ class inventory_app extends application
 			"inventory/manage/sales_kits.php?", 'SA_SALESKIT', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _("Item &Categories"),
 			"inventory/manage/item_categories.php?", 'SA_ITEMCATEGORY', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _("Shift &Definitions"),
+			"inventory/manage/avogs_shifts.php?", 'SA_ITEM', MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _("Inventory &Locations"),
 			"inventory/manage/locations.php?", 'SA_INVENTORYLOCATION', MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _("&Units of Measure"),
