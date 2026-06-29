@@ -27,7 +27,9 @@ return array(
     'currency' => 'KSh',
 
     // Directory for uploaded checklist photos (created if missing).
-    'upload_dir' => __DIR__ . '/uploads',
+    // NB: must NOT be named "uploads" — that collides with the POST /uploads
+    // route on web servers (the dir gets served instead of reaching the API).
+    'upload_dir' => __DIR__ . '/storage',
 
     // --- Logging ---------------------------------------------------------
     // File the API writes its log to (directory created if missing).

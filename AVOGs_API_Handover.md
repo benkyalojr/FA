@@ -286,7 +286,7 @@ List item: `{ "id", "product", "qty", "reason", "duration", "loss", "time" }`.
 
 ### `POST /uploads` (multipart)
 Send `multipart/form-data` with a single file field named **`file`** (checklist photos).
-**201** `{ "upload_id": "upl_ab12cd", "url": "http://localhost:8080/api/uploads/upl_ab12cd.jpg" }`
+**201** `{ "upload_id": "upl_ab12cd", "url": "http://localhost:8080/api/storage/upl_ab12cd.jpg" }`
 - Use the returned `upload_id` in `photo_ids` on shift open/close. **422** if the `file` field is missing.
 
 ---

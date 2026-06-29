@@ -7,8 +7,8 @@
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
 // Serve uploaded files directly if they exist.
-if (preg_match('#^/api/uploads/(.+)$#', $uri, $m)) {
-    $file = __DIR__ . '/uploads/' . basename($m[1]);
+if (preg_match('#^/api/storage/(.+)$#', $uri, $m)) {
+    $file = __DIR__ . '/storage/' . basename($m[1]);
     if (is_file($file)) {
         return false; // let the built-in server serve the static file
     }

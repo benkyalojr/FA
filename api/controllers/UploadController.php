@@ -23,7 +23,7 @@ class UploadController
         }
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
-        $url = $scheme . '://' . $host . '/api/uploads/' . $filename;
+        $url = $scheme . '://' . $host . '/api/storage/' . $filename;
 
         $now = date('Y-m-d H:i:s');
         Db::exec("INSERT INTO " . Db::t('uploads') . " (upload_id, path, url, created_at) VALUES ("
