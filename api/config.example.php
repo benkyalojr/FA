@@ -14,8 +14,8 @@ return array(
     // Which FA company (db_connections index) and service account to log in as.
     // Use a dedicated, least-privilege FA user in production.
     'fa_company' => 0,
-    'fa_service_user' => 'admin',
-    'fa_service_pass' => 'CHANGE_ME',
+    'fa_service_user' => 'apiuser',
+    'fa_service_pass' => 'apiuser',
 
     // API token lifetime in days.
     'token_ttl_days' => 30,

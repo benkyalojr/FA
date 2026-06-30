@@ -151,6 +151,27 @@ require_once __DIR__ . '/lib/Response.php';
 require_once __DIR__ . '/lib/Router.php';
 require_once __DIR__ . '/lib/Db.php';
 require_once __DIR__ . '/lib/Auth.php';
+require_once __DIR__ . '/lib/FaTransaction.php';
+
+// FA's session.inc registers exception_handler() → end_page() (HTML footer).
+// For API requests, emit JSON instead so Phase-2 controllers never leak UI.
+set_exception_handler(function ($e) {
+    Logger::error('API exception: ' . $e->getMessage(), array(
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+        'class' => get_class($e),
+    ));
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(array('error' => array(
+        'code' => 'server_error',
+        'message' => $e->getMessage(),
+    )));
+    exit;
+});
 
 foreach (glob(__DIR__ . '/controllers/*.php') as $__controller) {
     require_once $__controller;
