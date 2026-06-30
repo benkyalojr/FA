@@ -13,6 +13,24 @@ define('VARLIB_PATH', $path_to_root.'/tmp');
 define('VARLOG_PATH', $path_to_root.'/tmp');
 define('SECURE_ONLY', true); // if you really need also http (unsecure) access allowed, you can set this to NULL
 
+// Behind nginx / a load balancer PHP often sees the proxy IP, not the client.
+// FA's preventHijacking() compares REMOTE_ADDR on every request; if it flips
+// the session is wiped and the user is logged out.  Normalise once here so
+// login and subsequent requests use the same address.
+if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+	$_fa_xff = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+	$_SERVER['REMOTE_ADDR'] = trim($_fa_xff[0]);
+	unset($_fa_xff);
+} elseif (!empty($_SERVER['HTTP_X_REAL_IP'])) {
+	$_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_X_REAL_IP'];
+}
+// SSL terminator: make HTTPS visible to session cookie logic below.
+if ((empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off')
+	&& !empty($_SERVER['HTTP_X_FORWARDED_PROTO'])
+	&& strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') {
+	$_SERVER['HTTPS'] = 'on';
+}
+
 class SessionManager
 {
    	function sessionStart($name, $limit = 0, $path = '/', $domain = null, $secure = null)
@@ -432,7 +450,9 @@ if ($SysPrefs->error_logfile != '') {
 	to avoid unexpeced session timeouts.
 	Make sure this directory exists and is writable!
 */
-// ini_set('session.save_path', VARLIB_PATH.'/');
+if (is_dir(VARLIB_PATH) && is_writable(VARLIB_PATH)) {
+	ini_set('session.save_path', VARLIB_PATH);
+}
 
 // ini_set('session.gc_maxlifetime', 36000); // 10hrs - moved to before session_manager
 

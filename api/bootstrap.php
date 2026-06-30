@@ -87,6 +87,14 @@ foreach ($_COOKIE as $_k => $_v) {
     }
 }
 unset($_k, $_v);
+
+// The API must never send a session cookie back to the browser.  Stripping
+// $_COOKIE above stops us READING the user's session, but session.inc still
+// uses the FA cookie name — without this, session_start() creates a new id
+// and PHP emits  Set-Cookie: FA<hash>=<newid>  which REPLACES the user's
+// cookie.  The next web UI click loads the API's empty session → logout.
+ini_set('session.use_cookies', '0');
+ini_set('session.use_only_cookies', '1');
 // ────────────────────────────────────────────────────────────────────────────
 
 // Preserve any real request form params, then hand FA the service login.
