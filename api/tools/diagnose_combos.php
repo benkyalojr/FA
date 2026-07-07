@@ -11,7 +11,9 @@ require dirname(__DIR__) . '/bootstrap.php';
 
 function out($m) { fwrite(STDOUT, $m . "\n"); }
 
-$P = TB_PREF;
+global $db_connections;
+$comp = isset($_SESSION['wa_current_user']) ? $_SESSION['wa_current_user']->cur_con : 0;
+$P = isset($db_connections[$comp]['tbpref']) ? $db_connections[$comp]['tbpref'] : TB_PREF;
 
 function count_rows($sql, $label)
 {
@@ -63,9 +65,20 @@ if ($stock > 0 && $codes === 0) {
 }
 
 out("\nCompany prefs (search-only mode makes combos look empty until you type *):");
-foreach (array('no_item_list', 'no_customer_list', 'no_supplier_list', 'curr_default') as $pref) {
+$searchPrefs = array('no_item_list', 'no_customer_list', 'no_supplier_list');
+$searchOn = 0;
+foreach (array_merge($searchPrefs, array('curr_default')) as $pref) {
     $v = get_company_pref($pref);
     out("  {$pref}: " . ($v === null || $v === '' ? '(not set)' : $v));
+    if (in_array($pref, $searchPrefs, true) && (string) $v === '1') {
+        $searchOn++;
+    }
+}
+if ($searchOn > 0) {
+    out("\n*** Search-only list mode is ON ({$searchOn}/3). Customer/Item/Supplier combos");
+    out("    show almost nothing until you type * in the search box and click lookup,");
+    out("    or run: php api/tools/fix_combo_search_prefs.php");
+    out("    or uncheck them in Setup → Company Setup.");
 }
 
 $home = get_company_currency();
@@ -87,7 +100,7 @@ if ($badCust || $badPrice) {
 $missingRate = count_rows(
     "SELECT COUNT(DISTINCT d.curr_code) AS n FROM {$P}debtors_master d
      LEFT JOIN {$P}exchange_rates e ON e.curr_code = d.curr_code AND e.date_ <= CURDATE()
-     WHERE d.curr_code != " . db_escape($home) . " AND e.rate IS NULL",
+     WHERE d.curr_code != " . db_escape($home) . " AND e.rate_buy IS NULL",
     'missing rates'
 );
 if ($missingRate) {
