@@ -79,4 +79,33 @@ class UploadController
 
         Response::json(array('upload_id' => $id, 'url' => $url), 201);
     }
+
+    /** Serve an uploaded file when nginx cannot expose api/storage/ directly. */
+    public static function serve(Request $req, $params)
+    {
+        global $AVOGS_CFG;
+        $name = isset($params['filename']) ? basename($params['filename']) : '';
+        if ($name === '' || !preg_match('/^upl_[a-f0-9]+\\.[a-zA-Z0-9]+$/', $name)) {
+            Response::error('Not found.', 404);
+        }
+        $dir = isset($AVOGS_CFG['upload_dir']) ? $AVOGS_CFG['upload_dir'] : (__DIR__ . '/../storage');
+        $path = rtrim($dir, '/') . '/' . $name;
+        if (!is_file($path) || !is_readable($path)) {
+            Response::error('Not found.', 404);
+        }
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        $types = array(
+            'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png',
+            'gif' => 'image/gif', 'webp' => 'image/webp', 'heic' => 'image/heic',
+        );
+        $mime = isset($types[$ext]) ? $types[$ext] : 'application/octet-stream';
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: private, max-age=86400');
+        readfile($path);
+        exit;
+    }
 }

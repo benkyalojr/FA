@@ -30,7 +30,12 @@ if (!is_readable($configFile)) {
 
 $AVOGS_CFG = require $configFile;
 
-// We surface our own JSON errors; keep PHP/FA notices out of the response body.
+// Photos must live in api/storage — never api/uploads (nginx serves that path as a directory).
+$apiStorage = __DIR__ . '/storage';
+if (empty($AVOGS_CFG['upload_dir'])
+    || preg_match('#/uploads/?$#', str_replace('\\', '/', $AVOGS_CFG['upload_dir']))) {
+    $AVOGS_CFG['upload_dir'] = $apiStorage;
+}
 error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_WARNING & ~E_STRICT);
 ini_set('display_errors', '0');
 

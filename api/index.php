@@ -110,6 +110,7 @@ $router->delete('/wastage/{id}', array('FinanceController', 'deleteWastage'));
 // Media — prefer POST /media on nginx (a physical api/uploads/ folder breaks POST /uploads).
 $router->post('/uploads', array('UploadController', 'create'));
 $router->post('/media', array('UploadController', 'create'));
+$router->get('/storage/{filename}', array('UploadController', 'serve'));
 
 // Reports & dashboard
 $router->get('/dashboard', array('DashboardController', 'index'));
