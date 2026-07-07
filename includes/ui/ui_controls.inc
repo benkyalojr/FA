@@ -41,6 +41,10 @@ function start_form($multi=false, $dummy=false, $action="", $name="")
 
 	if (++$form_nested) return;
 
+	if (!isset($_SESSION['csrf_token'])) {
+		$_SESSION['csrf_token'] = random_id();
+	}
+
 	if ($name != "")
 		$name = "name='$name'";
 	if ($action == "")
