@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: AVO'Gs FrontAccounting API — Retail
-  version: 2.3.1
+  version: 2.4.0
   description: |
     Mobile-first REST API for small retail integrated with FrontAccounting.
 
@@ -38,6 +38,7 @@ tags:
   - name: Inventory Adjustments
   - name: Items
   - name: Prices
+  - name: Dashboard
 
 paths:
   /auth/login:
@@ -522,6 +523,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/ItemContext'
 
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Dashboard summary + trend (single call)
+      description: |
+        Returns today's sales amount, units sold, purchases amount, and a daily
+        series for charts. Data from FA `debtor_trans` (sales invoices) and
+        `supp_trans` (supplier invoices).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/date'
+        - name: days
+          in: query
+          schema: { type: integer, default: 7, minimum: 1, maximum: 60 }
+          description: Number of days in the trend series (including today)
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+
+  /dashboard/summary:
+    get:
+      tags: [Dashboard]
+      summary: Today's dashboard totals only
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/date'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+
+  /dashboard/trends:
+    get:
+      tags: [Dashboard]
+      summary: Sales and purchases trend for charts
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/date'
+        - name: days
+          in: query
+          schema: { type: integer, default: 7, minimum: 1, maximum: 60 }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardTrends'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -973,3 +1027,49 @@ components:
         qoh: { type: number, nullable: true }
         unit_price: { type: number }
         supplier_price: { type: number }
+
+    DashboardToday:
+      type: object
+      properties:
+        sales_amount: { type: number, description: Sum of sales invoice totals (incl. tax) }
+        units_sold: { type: number, description: Sum of invoice line quantities }
+        purchases_amount: { type: number, description: Sum of supplier invoice totals (incl. tax) }
+        invoice_count: { type: integer }
+        purchase_count: { type: integer }
+
+    DashboardTrendPoint:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        sales_amount: { type: number }
+        units_sold: { type: number }
+        purchases_amount: { type: number }
+
+    DashboardSummary:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        currency: { type: string }
+        today:
+          $ref: '#/components/schemas/DashboardToday'
+
+    DashboardTrends:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        currency: { type: string }
+        days: { type: integer }
+        trend:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardTrendPoint'
+
+    Dashboard:
+      allOf:
+        - $ref: '#/components/schemas/DashboardSummary'
+        - type: object
+          properties:
+            trend:
+              type: array
+              items:
+                $ref: '#/components/schemas/DashboardTrendPoint'

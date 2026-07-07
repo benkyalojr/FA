@@ -158,3 +158,241 @@ function avogs_checklist_template($mode)
     );
     return isset($T[$mode]) ? $T[$mode] : null;
 }
+
+/** Photo slots for the Open Shop / check-in wizard. */
+function avogs_checkin_photo_slots()
+{
+    return array(
+        array(
+            'key' => 'shop_opening',
+            'label' => 'Opening shop / taking over',
+            'required' => false,
+        ),
+        array(
+            'key' => 'juice_station',
+            'label' => 'Juice & smoothie station setup',
+            'required' => false,
+        ),
+        array(
+            'key' => 'arrangement',
+            'label' => 'Arranging of items',
+            'required' => false,
+        ),
+    );
+}
+
+/** Photo slots for the Close Shop / check-out wizard. */
+function avogs_checkout_photo_slots()
+{
+    return array(
+        array(
+            'key' => 'shop_closed',
+            'label' => 'Shop closed / locked up',
+            'required' => false,
+        ),
+        array(
+            'key' => 'cash_count',
+            'label' => 'Cash count',
+            'required' => false,
+        ),
+        array(
+            'key' => 'stock_remaining',
+            'label' => 'Remaining stock',
+            'required' => false,
+        ),
+    );
+}
+
+function avogs_checkout_photo_slot_label($slot)
+{
+    static $labels = array(
+        'shop_closed'       => 'Shop closed / locked up',
+        'cash_count'        => 'Cash count',
+        'stock_remaining'   => 'Remaining stock',
+    );
+    if (isset($labels[$slot])) {
+        return $labels[$slot];
+    }
+    return avogs_photo_slot_label($slot);
+}
+
+/** Normalise checkout photos (same shapes as check-in). */
+function avogs_normalize_checkout_photos($photos, $photoIds = null)
+{
+    $out = avogs_normalize_checkin_photos($photos, $photoIds);
+    if (empty($out) && is_array($photoIds)) {
+        return avogs_normalize_checkin_photos(array(), $photoIds);
+    }
+    return $out;
+}
+
+function avogs_resolve_checkout_photos($photosMap)
+{
+    $details = array();
+    $missing = array();
+    if (!is_array($photosMap)) {
+        return array($details, $missing);
+    }
+    foreach ($photosMap as $slot => $uploadId) {
+        $uploadId = trim((string) $uploadId);
+        if ($uploadId === '') {
+            continue;
+        }
+        $row = Db::row("SELECT upload_id, url FROM " . Db::t('uploads') . "
+            WHERE upload_id = " . Db::escRaw($uploadId));
+        if (!$row) {
+            $missing[] = array('slot' => $slot, 'upload_id' => $uploadId);
+            $details[] = array(
+                'slot' => $slot,
+                'label' => avogs_checkout_photo_slot_label($slot),
+                'upload_id' => $uploadId,
+                'url' => null,
+                'status' => 'missing',
+            );
+            continue;
+        }
+        $details[] = array(
+            'slot' => $slot,
+            'label' => avogs_checkout_photo_slot_label($slot),
+            'upload_id' => $row['upload_id'],
+            'url' => $row['url'],
+            'status' => 'ok',
+        );
+    }
+    return array($details, $missing);
+}
+
+function avogs_photo_slot_label($slot)
+{
+    static $labels = array(
+        'shop_opening'  => 'Opening shop / taking over',
+        'juice_station' => 'Juice & smoothie station setup',
+        'arrangement'   => 'Arranging of items',
+    );
+    if (isset($labels[$slot])) {
+        return $labels[$slot];
+    }
+    return ucwords(str_replace('_', ' ', $slot));
+}
+
+function avogs_json_decode($raw)
+{
+    if ($raw === null || $raw === '') {
+        return null;
+    }
+    if (is_array($raw)) {
+        return $raw;
+    }
+    $decoded = json_decode($raw, true);
+    if (is_array($decoded)) {
+        return $decoded;
+    }
+    $fixed = html_entity_decode($raw, ENT_QUOTES, 'UTF-8');
+    $decoded = json_decode($fixed, true);
+    return is_array($decoded) ? $decoded : null;
+}
+
+function avogs_normalize_checkin_photos($photos, $photoIds = null)
+{
+    $out = array();
+
+    if (is_string($photos)) {
+        $photos = avogs_json_decode($photos);
+    }
+
+    if (is_array($photos)) {
+        $isList = array_keys($photos) === range(0, count($photos) - 1);
+        if ($isList) {
+            foreach ($photos as $entry) {
+                if (!is_array($entry)) {
+                    continue;
+                }
+                $slot = null;
+                foreach (array('slot', 'key', 'name', 'photo_slot') as $k) {
+                    if (!empty($entry[$k])) {
+                        $slot = $entry[$k];
+                        break;
+                    }
+                }
+                $uid = null;
+                foreach (array('upload_id', 'id', 'uploadId', 'photo_id') as $k) {
+                    if (!empty($entry[$k])) {
+                        $uid = $entry[$k];
+                        break;
+                    }
+                }
+                if ($slot && $uid) {
+                    $out[$slot] = trim((string) $uid);
+                }
+            }
+        } else {
+            foreach ($photos as $slot => $val) {
+                if (is_array($val)) {
+                    foreach (array('upload_id', 'id', 'uploadId') as $k) {
+                        if (!empty($val[$k])) {
+                            $out[$slot] = trim((string) $val[$k]);
+                            break;
+                        }
+                    }
+                } elseif (is_string($val) && trim($val) !== '') {
+                    $out[$slot] = trim($val);
+                }
+            }
+        }
+    }
+
+    if (empty($out) && is_array($photoIds)) {
+        $slots = avogs_checkin_photo_slots();
+        $i = 0;
+        foreach ($photoIds as $val) {
+            if (is_array($val)) {
+                continue;
+            }
+            $uid = trim((string) $val);
+            if ($uid === '') {
+                continue;
+            }
+            $slot = isset($slots[$i]['key']) ? $slots[$i]['key'] : ('photo_' . ($i + 1));
+            $out[$slot] = $uid;
+            $i++;
+        }
+    }
+
+    return $out;
+}
+
+function avogs_resolve_photos($photosMap)
+{
+    $details = array();
+    $missing = array();
+    if (!is_array($photosMap)) {
+        return array($details, $missing);
+    }
+    foreach ($photosMap as $slot => $uploadId) {
+        $uploadId = trim((string) $uploadId);
+        if ($uploadId === '') {
+            continue;
+        }
+        $row = Db::row("SELECT upload_id, url FROM " . Db::t('uploads') . "
+            WHERE upload_id = " . Db::escRaw($uploadId));
+        if (!$row) {
+            $missing[] = array('slot' => $slot, 'upload_id' => $uploadId);
+            $details[] = array(
+                'slot' => $slot,
+                'label' => avogs_photo_slot_label($slot),
+                'upload_id' => $uploadId,
+                'url' => null,
+                'status' => 'missing',
+            );
+            continue;
+        }
+        $details[] = array(
+            'slot' => $slot,
+            'label' => avogs_photo_slot_label($slot),
+            'upload_id' => $row['upload_id'],
+            'url' => $row['url'],
+            'status' => 'ok',
+        );
+    }
+    return array($details, $missing);
+}

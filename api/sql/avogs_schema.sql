@@ -54,8 +54,24 @@ CREATE TABLE IF NOT EXISTS `0_avogs_shifts` (
   `cash_counted` int(11) NOT NULL DEFAULT 0,
   `notes` text,
   `photo_ids` text,
+  `photos_json` text,
+  `calls_deliveries` text,
+  `pending_orders` text,
   PRIMARY KEY (`id`),
   KEY `store_status` (`store_code`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- Per-item opening stock counts captured at check-in (audit only; does not post FA stock).
+CREATE TABLE IF NOT EXISTS `0_avogs_shift_stock_lines` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `shift_id` int(11) NOT NULL,
+  `stock_id` varchar(40) NOT NULL,
+  `description` varchar(120) NOT NULL DEFAULT '',
+  `units` varchar(20) NOT NULL DEFAULT '',
+  `expected_qty` double NOT NULL DEFAULT 0,
+  `actual_qty` double NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `shift_id` (`shift_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- Expected stock/cash handed to the NEXT shift (one row per store+shift).

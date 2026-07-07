@@ -104,6 +104,9 @@ def main():
     req("GET", "/wastage", token=token)
     req("GET", "/reports/sales-trend", token=token)
     req("GET", "/reports/sales-trend?days=14", token=token)
+    req("GET", "/dashboard", token=token)
+    req("GET", "/dashboard/summary", token=token)
+    req("GET", "/dashboard/trends?days=7", token=token)
 
     customers = req("GET", "/customers", token=token) or []
     suppliers = req("GET", "/suppliers", token=token) or []
@@ -249,11 +252,68 @@ def main():
     if isinstance(w, dict) and w.get("id"):
         req("DELETE", "/wastage/%d" % w["id"], token=token, expect=204)
 
-    # Shift open/close
-    sh = req("POST", "/shifts/open", token=token, body={"shift": "morning"}, expect=[201, 422])
+    # Check-in prefill + full open shop save with photos
+    pre = req("GET", "/shifts/checkin/prefill", token=token, expect=[200, 409])
+    upload_id = None
+    if isinstance(pre, dict) and pre.get("stock_items"):
+        # upload a photo first
+        try:
+            boundary = "----ApiTestBoundary%d" % int(time.time())
+            img = b"\xff\xd8\xff\xe0" + b"testjpeg"
+            body = (
+                ("--%s\r\n" % boundary).encode()
+                + b'Content-Disposition: form-data; name="file"; filename="checkin.jpg"\r\n'
+                + b"Content-Type: image/jpeg\r\n\r\n"
+                + img + b"\r\n"
+                + ("--%s--\r\n" % boundary).encode()
+            )
+            headers = {"Content-Type": "multipart/form-data; boundary=" + boundary}
+            upl = req("POST", "/uploads", token=token, multipart=(body, headers), expect=[201, 422, 500])
+            if isinstance(upl, dict):
+                upload_id = upl.get("upload_id")
+        except Exception:
+            pass
+
+        first = pre["stock_items"][0]
+        body = {
+            "shift": pre.get("shift", "morning"),
+            "store": pre.get("store"),
+            "cash": {"till": pre["cash"]["expected_till"], "float": pre["cash"]["expected_float"]},
+            "stock_counts": [{
+                "stock_id": first["stock_id"],
+                "description": first.get("description", ""),
+                "units": first.get("units", ""),
+                "expected_qty": first["expected_qty"],
+                "actual_qty": first["expected_qty"],
+            }],
+            "comments": {"calls_deliveries": "API test", "pending_orders": "none"},
+        }
+        if upload_id:
+            body["photos"] = {"shop_opening": upload_id}
+        sh = req("POST", "/shifts/checkin", token=token, body=body, expect=[201, 409, 422])
+    else:
+        sh = req("POST", "/shifts/open", token=token, body={"shift": "morning"}, expect=[201, 409, 422])
     shift_id = sh.get("shift_id") if isinstance(sh, dict) else None
     if shift_id:
-        req("POST", "/shifts/%d/close" % shift_id, token=token, body={}, expect=[200, 201, 204])
+        if upload_id and isinstance(sh, dict):
+            pc = sh.get("photo_count", 0)
+            req_ok = pc >= 1 if upload_id else True
+            results.append({
+                "method": "POST", "path": "/shifts/checkin photos",
+                "status": "PASS" if req_ok else "FAIL",
+                "code": 201 if req_ok else None,
+                "ok": req_ok,
+                "note": "photo_count=%s" % pc,
+            })
+        req("GET", "/shifts/%d/checkin" % shift_id, token=token)
+        req("GET", "/shifts/checkout/prefill", token=token, expect=[200, 409])
+        req("POST", "/shifts/checkout", token=token, body={
+            "cash_counted": 5000,
+            "handover": {"avo": 10, "till": 2000, "float": 500, "juice": 5, "smoothie": 3, "ginger": 2, "h250": 1, "h450": 1, "h900": 1},
+        }, expect=[200, 201, 409])
+        if shift_id:
+            req("GET", "/shifts/%d/checkout" % shift_id, token=token, expect=[200, 404])
+        req("GET", "/shifts/checkout/prefill", token=token, expect=409)
 
     # Upload
     try:

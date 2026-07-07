@@ -637,21 +637,220 @@ Include `customer_id` **or** `supplier_id` depending on screen.
 
 ---
 
-## 14. Optional: shifts & checklists
+## 14. Open Shop (check-in) & close shift
 
-Legacy AVO'Gs operational endpoints (shadow tables, not FA GL):
+Check-in captures opening stock counts, cash, photos, and comments for **FA inquiries and reports only** — it does **not** post inventory adjustments or GL entries.
+
+> **Short integration guide:** [`CHECKIN.md`](CHECKIN.md) — endpoint sequence and how photos are stored.
+
+### Endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/shifts/current` | Active shift for store |
-| POST | `/shifts/open` | Open shift |
-| POST | `/shifts/{id}/close` | Close shift |
-| GET | `/checklists/{mode}` | Checklist template (`morning-open`, `evening-open`, …) |
-| GET | `/deliveries`, `/supplies`, `/expenses`, `/wastage` | Store ops logs |
-| POST | `/uploads` | Multipart photo upload (`file` field) |
-| GET | `/reports/sales-trend?days=7` | Chart data from shadow sales table |
+| GET | `/shifts/current` | Is a shift already open for this store? |
+| GET | `/shifts/checkin/prefill` | Load wizard: stock list + expected QOH, expected till/float, photo slots |
+| POST | `/shifts/checkin` | **Save full Open Shop checklist** (single submit at end) |
+| GET | `/shifts/{id}/checkin` | Read back one check-in (stock lines, photos, comments) |
+| POST | `/shifts/open` | Alias of `/shifts/checkin` (legacy) |
+| POST | `/shifts/{id}/close` | Close shop / check-out |
+| GET | `/checklists/{mode}` | Checklist copy (`morning-open`, `evening-open`, …) |
+| POST | `/uploads` | Multipart photo upload (`file` field) → returns `upload_id` |
 
-Wire these only if the Flutter app still uses shift/checklist screens.
+FA staff review: **Inventory → Inquiries → Shift Check-in (Opening) Inquiry** → **View** on a row.
+
+### App flow — Open Shop (save once at the end)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. GET /shifts/current                                      │
+│    → if active=true, resume or prompt to close first        │
+└───────────────────────────┬─────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 2. GET /shifts/checkin/prefill?store=DEF&shift=morning      │
+│    → stock_items[] (expected_qty from FA QOH)               │
+│    → cash.expected_till / expected_float (from handover)      │
+│    → photo_slots[], comment_fields[]                          │
+└───────────────────────────┬─────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Steps 1–5: user fills wizard locally (no API calls)         │
+│   • Confirm stock — enter actual_qty per item               │
+│   • Cash — enter till & float                                 │
+│   • Photos — POST /uploads for each slot, keep upload_ids    │
+│   • Comments — calls/deliveries, pending orders               │
+└───────────────────────────┬─────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 3. POST /shifts/checkin  (single save)                      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Step 1 — Check for open shift
+
+```http
+GET /api/shifts/current?store=DEF
+Authorization: Bearer <token>
+```
+
+If `active` is `true`, either resume that shift or block a new check-in until close.
+
+#### Step 2 — Prefill
+
+```http
+GET /api/shifts/checkin/prefill?store=DEF&shift=morning
+Authorization: Bearer <token>
+```
+
+Response (abbreviated):
+
+```json
+{
+  "store": "DEF",
+  "shift": "morning",
+  "cash": { "expected_till": 2000, "expected_float": 500 },
+  "stock_items": [
+    {
+      "stock_id": "AVO-RT-S1",
+      "description": "Avocado Retail S1",
+      "units": "each",
+      "unit_label": "pc",
+      "group": "retail",
+      "expected_qty": 12
+    }
+  ],
+  "photo_slots": [
+    { "key": "shop_opening", "label": "Opening shop / taking over" },
+    { "key": "juice_station", "label": "Juice & smoothie station setup" },
+    { "key": "arrangement", "label": "Arranging of items" }
+  ],
+  "comment_fields": [
+    { "key": "calls_deliveries", "label": "Making calls and deliveries" },
+    { "key": "pending_orders", "label": "Checking pending orders" }
+  ]
+}
+```
+
+`expected_qty` comes from FA quantity-on-hand at the store location. User-entered counts are stored for audit; they do not change FA stock.
+
+#### Step 3 — Upload photos (during wizard, before final save)
+
+```http
+POST /api/uploads
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+
+file=<image bytes>
+```
+
+Response: `{ "upload_id": "upl_a1b2c3", "url": "http://..." }` — store each `upload_id` keyed by photo slot.
+
+#### Step 4 — Submit Open Shop (end of wizard)
+
+```http
+POST /api/shifts/checkin
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+```json
+{
+  "store": "DEF",
+  "shift": "morning",
+  "cash": {
+    "till": 2000,
+    "float": 500
+  },
+  "stock_counts": [
+    {
+      "stock_id": "AVO-RT-S1",
+      "description": "Avocado Retail S1",
+      "units": "each",
+      "expected_qty": 12,
+      "actual_qty": 11
+    }
+  ],
+  "photos": {
+    "shop_opening": "upl_abc123",
+    "juice_station": "upl_def456",
+    "arrangement": "upl_ghi789"
+  },
+  "comments": {
+    "calls_deliveries": "Called supplier X, delivery at 2pm",
+    "pending_orders": "2 wholesale orders pending pickup"
+  }
+}
+```
+
+Response `201`:
+
+```json
+{
+  "shift_id": 42,
+  "status": "open",
+  "stock_discrepancy": true,
+  "cash_discrepancy": false,
+  "stock_counts": [ "... with variance ..." ],
+  "photos": { "...": "..." },
+  "comments": { "...": "..." }
+}
+```
+
+`stock_discrepancy` / `cash_discrepancy` are computed server-side when actual counts differ from expected.
+
+#### Flutter pseudocode
+
+```dart
+Future<void> openShop() async {
+  final current = await api.get('/shifts/current');
+  if (current['active'] == true) {
+    throw StateError('Close the current shift first');
+  }
+
+  final prefill = await api.get('/shifts/checkin/prefill', query: {
+    'store': storeCode,
+    'shift': shiftKey,
+  });
+
+  // Wizard steps — hold state locally
+  final stockCounts = prefill['stock_items'].map((item) {
+    return {...item, 'actual_qty': item['expected_qty']}; // user edits
+  }).toList();
+  final till = TextEditingController(text: '${prefill['cash']['expected_till']}');
+  final float = TextEditingController(text: '${prefill['cash']['expected_float']}');
+  final photos = <String, String>{}; // slot -> upload_id
+  final callsCtrl = TextEditingController();
+  final ordersCtrl = TextEditingController();
+
+  // On each photo pick:
+  // final upl = await api.uploadFile('/uploads', file);
+  // photos['shop_opening'] = upl['upload_id'];
+
+  // On "Open Shop" button — single save:
+  await api.post('/shifts/checkin', body: {
+    'store': storeCode,
+    'shift': shiftKey,
+    'cash': {'till': int.parse(till.text), 'float': int.parse(float.text)},
+    'stock_counts': stockCounts,
+    'photos': photos,
+    'comments': {
+      'calls_deliveries': callsCtrl.text,
+      'pending_orders': ordersCtrl.text,
+    },
+  });
+}
+```
+
+### Close shift (check-out)
+
+Still uses `POST /shifts/{id}/close` with `cash_counted`, optional `handover` figures, and `photo_ids`. See existing close checklist modes (`morning-close`, `evening-close`).
+
+### Other legacy ops endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/deliveries`, `/supplies`, `/expenses`, `/wastage` | Store ops logs |
+| GET | `/reports/sales-trend?days=7` | Chart data from shadow sales table |
 
 ---
 
@@ -743,6 +942,48 @@ Expect **68/68 pass** against local `:8090` with user `apiuser`.
 4. POST /purchasing/invoices  { supplier_id, supplier_ref, location, lines }
 5. GET /purchasing/invoices/{invoice_no}
 ```
+
+---
+
+## Dashboard
+
+One call for the home screen KPIs and chart:
+
+```http
+GET /api/dashboard?days=7
+Authorization: Bearer <token>
+```
+
+**Response:**
+
+```json
+{
+  "date": "2026-07-07",
+  "currency": "KES",
+  "today": {
+    "sales_amount": 7485,
+    "units_sold": 71,
+    "purchases_amount": 5628,
+    "invoice_count": 18,
+    "purchase_count": 3
+  },
+  "trend": [
+    { "date": "2026-07-01", "sales_amount": 0, "units_sold": 0, "purchases_amount": 0 },
+    { "date": "2026-07-07", "sales_amount": 7485, "units_sold": 71, "purchases_amount": 5628 }
+  ]
+}
+```
+
+| Field | Source |
+|-------|--------|
+| `sales_amount` | FA sales invoices (`debtor_trans` type 10): amount + tax + freight |
+| `units_sold` | Sum of `debtor_trans_details.quantity` on those invoices |
+| `purchases_amount` | FA supplier invoices (`supp_trans` type 20): amount + tax |
+| `trend` | One row per day for the last `days` (default 7), zero-filled |
+
+Optional split endpoints: `GET /dashboard/summary`, `GET /dashboard/trends?days=7`.
+
+Query `?date=YYYY-MM-DD` to use a day other than today (e.g. testing).
 
 ---
 

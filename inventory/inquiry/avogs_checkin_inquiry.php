@@ -9,6 +9,7 @@ $path_to_root = "../..";
 include_once($path_to_root . "/includes/session.inc");
 include_once($path_to_root . "/includes/date_functions.inc");
 include_once($path_to_root . "/includes/ui.inc");
+include_once(__DIR__ . "/avogs_report.inc");
 
 $js = "";
 if (user_use_date_picker())
@@ -21,15 +22,14 @@ if (get_post('ShowList'))
     $Ajax->activate('inq_tbl');
 
 //------------------------------------------------------------------------------------------------
-$shifts_tbl = TB_PREF . "avogs_shifts";
+$shifts_tbl = avogs_shifts_tbl();
+$lines_tbl = avogs_stock_lines_tbl();
 
-// Build store filter from the shifts that exist.
 $store_opts = array('' => _("All Stores"));
 $sres = db_query("SELECT DISTINCT store_code FROM $shifts_tbl ORDER BY store_code", "store list");
 while ($r = db_fetch($sres))
     $store_opts[$r['store_code']] = $r['store_code'];
 
-// Build user filter from FA users.
 $user_opts = array('' => _("All Users"));
 $ures = db_query("SELECT user_id, real_name FROM " . TB_PREF . "users WHERE inactive = 0 ORDER BY real_name", "user list");
 while ($r = db_fetch($ures))
@@ -65,34 +65,45 @@ if (get_post('store') != '')
 if (get_post('shift') != '')
     $where .= " AND s.shift_key = " . db_escape(get_post('shift'));
 
-$sql = "SELECT s.*, u.real_name FROM $shifts_tbl s
+$sql = "SELECT s.*, u.real_name,
+        (SELECT COUNT(*) FROM $lines_tbl l WHERE l.shift_id = s.id) AS stock_line_count
+    FROM $shifts_tbl s
     LEFT JOIN " . TB_PREF . "users u ON u.user_id = s.opened_by
-    WHERE $where ORDER BY s.opened_at DESC, s.id DESC";
+    WHERE $where
+    ORDER BY s.opened_at DESC, s.id DESC";
 $result = db_query($sql, "could not retrieve check-in data");
+
+echo avogs_report_styles();
 
 div_start('inq_tbl');
 start_table(TABLESTYLE);
-$th = array(_("Opened At"), _("Opened By"), _("Store"), _("Shift"), _("Opening Stock (pcs)"),
-    _("Opening Till"), _("Opening Float"), _("Stock"), _("Cash"), _("Status"));
+$th = array(_("Opened At"), _("Opened By"), _("Store"), _("Shift"),
+    _("Items"), _("Avo (pcs)"), _("Till"), _("Float"),
+    _("Stock"), _("Cash"), _("Photos"), _("Notes"), _("Status"), "");
 table_header($th);
 
 $k = 0;
 $count = 0;
-$tot_stock = 0; $tot_till = 0; $tot_float = 0;
+$tot_stock = 0;
+$tot_till = 0;
+$tot_float = 0;
 while ($row = db_fetch($result)) {
     alt_table_row_color($k);
 
-    label_cell($row['opened_at'] ? sql2date(substr($row['opened_at'], 0, 10)) . " " . substr($row['opened_at'], 11, 5) : "-");
+    label_cell(avogs_format_dt($row['opened_at']));
     label_cell($row['real_name'] ? $row['real_name'] : ($row['opened_by'] ? $row['opened_by'] : "-"));
     label_cell($row['store_code']);
     label_cell(ucfirst($row['shift_key']));
+    label_cell((int) $row['stock_line_count'], "align=center");
     qty_cell($row['opening_stock'], false, 0);
     amount_cell($row['opening_till']);
     amount_cell($row['opening_float']);
-    // Discrepancy flags from the opening count.
-    label_cell($row['stock_discrepancy'] ? "<span style='color:#c0392b'>" . _("Flagged") . "</span>" : "<span style='color:#27ae60'>" . _("OK") . "</span>", "align=center");
-    label_cell($row['cash_discrepancy'] ? "<span style='color:#c0392b'>" . _("Flagged") . "</span>" : "<span style='color:#27ae60'>" . _("OK") . "</span>", "align=center");
+    label_cell(avogs_flag_html($row['stock_discrepancy']), "align=center");
+    label_cell(avogs_flag_html($row['cash_discrepancy']), "align=center");
+    label_cell((string) avogs_count_photos($row), "align=center");
+    label_cell(avogs_inquiry_icon(avogs_has_comments($row)), "align=center");
     label_cell($row['status'] == 'open' ? _("Open") : _("Closed"), "align=center");
+    label_cell(avogs_view_link($path_to_root, 'avogs_checkin_view.php', $row['id']), "align=center");
     end_row();
 
     $tot_stock += $row['opening_stock'];
@@ -102,14 +113,14 @@ while ($row = db_fetch($result)) {
 }
 
 if ($count == 0) {
-    label_row(_("No check-ins found for the selected period."), "", "colspan=10 align=center");
+    label_row(_("No check-ins found for the selected period."), "", "colspan=14 align=center");
 } else {
     start_row("class='inquirybg'");
-    label_cell("<b>" . _("Totals") . " ($count " . _("check-ins") . ")</b>", "colspan=4");
+    label_cell("<b>" . _("Totals") . " ($count " . _("check-ins") . ")</b>", "colspan=5");
     qty_cell($tot_stock, false, 0);
     amount_cell($tot_till);
     amount_cell($tot_float);
-    label_cell("&nbsp;", "colspan=3");
+    label_cell("&nbsp;", "colspan=6");
     end_row();
 }
 

@@ -19,6 +19,28 @@ class Db
         return db_escape($v, $nullable);
     }
 
+    /**
+     * Escape for SQL without FA's html_specials_encode (required for JSON blobs).
+     * db_escape() entity-encodes quotes which breaks json_decode on read-back.
+     */
+    public static function escRaw($value, $nullify = false)
+    {
+        global $db;
+        if ($value === null || $value === '') {
+            return $nullify ? 'NULL' : "''";
+        }
+        if (!is_string($value) && !is_numeric($value)) {
+            $value = (string) $value;
+        }
+        return "'" . mysqli_real_escape_string($db, (string) $value) . "'";
+    }
+
+    /** JSON-encode then SQL-escape for storage in TEXT columns. */
+    public static function json($value)
+    {
+        return self::escRaw(json_encode($value));
+    }
+
     /** Run a query through FA, logging failures (and the SQL) when they happen. */
     private static function run($sql, $err)
     {

@@ -10,7 +10,15 @@ class UploadController
             @mkdir($dir, 0775, true);
         }
         if (empty($_FILES['file']) || !is_uploaded_file($_FILES['file']['tmp_name'])) {
-            Response::error('Expected a multipart file field named "file".', 422);
+            foreach (array('image', 'photo') as $alt) {
+                if (!empty($_FILES[$alt]) && is_uploaded_file($_FILES[$alt]['tmp_name'])) {
+                    $_FILES['file'] = $_FILES[$alt];
+                    break;
+                }
+            }
+        }
+        if (empty($_FILES['file']) || !is_uploaded_file($_FILES['file']['tmp_name'])) {
+            Response::error('Expected a multipart file field named "file" (also accepts "image" or "photo").', 422);
         }
         $id = 'upl_' . bin2hex(openssl_random_pseudo_bytes(6));
         $ext = pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION);

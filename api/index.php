@@ -14,10 +14,11 @@ $router->get('/', function ($req) {
     Response::json(array(
         'name'    => "AVO'Gs API",
         'status'  => 'ok',
-        'version' => '2.3.1',
+        'version' => '2.5.0',
         'scope'   => 'retail',
         'docs'    => '/api/docs/',
         'guide'   => '/api/docs/MOBILE_APP_GUIDE.md',
+        'checkin' => '/api/docs/CHECKIN.md',
         'transactions' => array(
             'sales_invoice'      => '/sales/invoices',
             'customer_payment'   => '/sales/payments',
@@ -55,6 +56,12 @@ $router->get('/inventory', array('InventoryController', 'index'));
 // Shifts & checklists
 $router->get('/checklists/{mode}', array('ShiftController', 'checklist'));
 $router->get('/shifts/current', array('ShiftController', 'current'));
+$router->get('/shifts/checkin/prefill', array('ShiftController', 'checkinPrefill'));
+$router->post('/shifts/checkin', array('ShiftController', 'checkin'));
+$router->get('/shifts/checkout/prefill', array('ShiftController', 'checkoutPrefill'));
+$router->post('/shifts/checkout', array('ShiftController', 'checkout'));
+$router->get('/shifts/{id}/checkin', array('ShiftController', 'checkinShow'));
+$router->get('/shifts/{id}/checkout', array('ShiftController', 'checkoutShow'));
 $router->post('/shifts/open', array('ShiftController', 'open'));
 $router->post('/shifts/{id}/close', array('ShiftController', 'close'));
 
@@ -103,7 +110,10 @@ $router->delete('/wastage/{id}', array('FinanceController', 'deleteWastage'));
 // Media
 $router->post('/uploads', array('UploadController', 'create'));
 
-// Reports
+// Reports & dashboard
+$router->get('/dashboard', array('DashboardController', 'index'));
+$router->get('/dashboard/summary', array('DashboardController', 'summary'));
+$router->get('/dashboard/trends', array('DashboardController', 'trends'));
 $router->get('/reports/sales-trend', array('ReportController', 'salesTrend'));
 
 $router->dispatch($req);
