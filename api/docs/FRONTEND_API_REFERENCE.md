@@ -1,14 +1,38 @@
 # AVO'Gs Transaction API — Frontend Reference
 
-**Version:** Phase 2  
-**Base URL:** `https://<host>/api`  
-**Updated:** 2026-06-30
+> **Start here:** [`MOBILE_APP_GUIDE.md`](MOBILE_APP_GUIDE.md) — canonical guide for the mobile team (retail scope, screens, examples, pricing).
+>
+> This file retains detailed request/response notes for older B2B endpoints (removed from routing). For live routes, prefer the guide + Swagger.
 
-This document covers every endpoint the frontend needs to create, read, and fulfil the seven FrontAccounting transaction types. Each document type follows the same three-step pattern:
+**Version:** Retail 2.3.1  
+**Base URL:** `https://<host>/api`  
+**Updated:** 2026-07-07
+
+**Swagger UI:** [`/api/docs/`](../docs/) · **OpenAPI spec:** [`/api/docs/openapi.yaml`](../docs/openapi.yaml)
+
+This document covers the **retail** transaction APIs. Each document type follows the same three-step pattern:
 
 1. **Prefill** `GET …/prefill` — fetch defaults, prices, and stock before the user builds the form.
 2. **Commit** `POST …` — submit the completed document.
 3. **Consume** `GET …/{id}` — read back the saved document for display or sync.
+
+## Retail scope
+
+| Active | FA screen equivalent |
+|--------|----------------------|
+| `GET/POST /sales/invoices` | Direct sales invoice (`sales_order_entry.php?NewInvoice=0`) |
+| `GET/POST /sales/payments` | Customer payment |
+| `GET/POST /purchasing/invoices` | Direct supplier invoice (`po_entry_items.php?NewInvoice=Yes`) |
+| `GET/POST /inventory/adjustments` | Inventory adjustment |
+
+**Removed (404):** `/sales/orders/*`, `/sales/deliveries/*`, `/purchasing/orders/*`, `/inventory/transfers/*`
+
+| If you were calling… | Use instead… |
+|---------------------|--------------|
+| `GET /sales/orders/prefill?customer_id=1` | `GET /sales/invoices/prefill?customer_id=1` |
+| `GET /purchasing/orders/prefill?supplier_id=1` | `GET /purchasing/invoices/prefill?supplier_id=1` |
+
+**Read-only master data:** `/customers`, `/suppliers`, `/items`, `/sales-types`, `/prices`, `/purchasing-data`, `/customers/{id}/prices`, `/suppliers/{id}/prices` — see Swagger.
 
 ---
 
@@ -121,6 +145,9 @@ All errors use the same JSON shape:
 ---
 
 ## 4. Sales order
+
+> **Removed in retail API (404).** Use [§5 Sales invoice (direct)](#5-sales-invoice-direct) instead.
+> Replace `GET /sales/orders/prefill` with `GET /sales/invoices/prefill`.
 
 A sales order reserves stock for future delivery. It **does not** move inventory.
 
@@ -430,6 +457,8 @@ Authorization: Bearer <token>
 
 ## 6. Sales delivery (direct)
 
+> **Removed in retail API (404).** Retail uses direct sales invoice only (§5).
+
 A direct delivery **moves stock out** without raising an AR invoice. Useful for fulfilment-before-invoice workflows.
 
 ### Document chain
@@ -516,6 +545,8 @@ Authorization: Bearer <token>
 
 ## 7. Deliver from an existing order
 
+> **Removed in retail API (404).** Requires sales orders (§4), which are not exposed.
+
 When a sales order already exists, deliver against it partially or fully.
 
 ```
@@ -554,6 +585,10 @@ Only include the lines you want to dispatch in this delivery. Unspecified lines 
 ---
 
 ## 8. Purchase order
+
+> **Removed in retail API (404).** Use **Supplier invoice** instead:
+> `GET /purchasing/invoices/prefill?supplier_id=…` → `POST /purchasing/invoices`
+> (direct GRN + AP invoice + stock in, no separate PO step).
 
 A purchase order records a commitment to buy from a supplier. Stock is **not** moved at this stage; it moves when the goods are received (GRN).
 
@@ -699,6 +734,8 @@ Authorization: Bearer <token>
 ---
 
 ## 9. Location transfer
+
+> **Removed in retail API (404).** Use FA desktop `inventory/transfers.php` for inter-location moves.
 
 Move stock between two warehouse locations. Two stock_moves are created per line (debit source, credit destination). No GL posting.
 
@@ -1161,37 +1198,29 @@ When `supplier_id` is also passed, a `supplier_price` field is included.
 
 ---
 
-### Workflow B — Order → partial delivery → invoice
+### Workflow B — Direct sale (retail)
 
 ```
-1. GET /api/sales/orders/prefill?customer_id=5
-2. POST /api/sales/orders { lines: [{ stock_id: "AVO-RT-S1", quantity: 20 }] }
-   → order_no: 1042
-
-3. (Next day) POST /api/sales/orders/1042/deliveries
-   { lines: [{ stock_id: "AVO-RT-S1", quantity: 10 }] }
-   → delivery_no: 414  (partial)
-
-4. POST /api/sales/invoices { ... lines same 10 qty ... }
-   → invoice_no: 559
-
-5. Repeat step 3–4 for remaining 10 units.
+1. GET /api/sales/invoices/prefill?customer_id=1
+2. POST /api/sales/invoices
+   { customer_id: 1, lines: [{ stock_id: "AVO-RT-S1", quantity: 2 }] }
+   → invoice_no: 558
 ```
 
 ---
 
-### Workflow C — Stock replenishment
+### Workflow C — Stock replenishment (retail)
 
 ```
-1. GET /api/purchasing/orders/prefill?supplier_id=3&location=DEF
-2. POST /api/purchasing/orders { lines: [{ stock_id: "AVO-RT-S1", quantity: 100, unit_price: 80 }] }
-   → order_no: 215
-   (GRN receive happens separately in FA desktop)
-
-3. GET /api/inventory/transfers/prefill?from_location=DEF&to_location=SHOP2
-4. POST /api/inventory/transfers
-   { from_location: "DEF", to_location: "SHOP2", lines: [{ stock_id: "AVO-RT-S1", quantity: 50 }] }
-   → transfer_no: 77
+1. GET /api/purchasing/invoices/prefill?supplier_id=1&location=DEF
+2. POST /api/purchasing/invoices
+   {
+     supplier_id: 1,
+     supplier_ref: "INV-2026-001",
+     location: "DEF",
+     lines: [{ stock_id: "AVO-RT-S1", quantity: 100, unit_price: 80 }]
+   }
+   → invoice_no: … (GRN + AP + stock in in one step)
 ```
 
 ---
@@ -1211,33 +1240,30 @@ When `supplier_id` is also passed, a `supplier_price` field is included.
 
 ---
 
-## Quick reference — all routes
+## Quick reference — retail routes
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/sales/orders/prefill` | Sales order form defaults |
-| `POST` | `/sales/orders` | Create sales order |
-| `GET` | `/sales/orders/{id}` | Read sales order |
-| `POST` | `/sales/orders/{id}/deliveries` | Fulfil from existing SO |
-| `GET` | `/sales/invoices/prefill` | Invoice form defaults |
-| `POST` | `/sales/invoices` | Create direct invoice |
+| `GET` | `/sales/invoices/prefill` | Direct invoice form defaults (**not** `/sales/orders/prefill`) |
+| `POST` | `/sales/invoices` | Create direct sales invoice |
 | `GET` | `/sales/invoices/{id}` | Read invoice |
-| `GET` | `/sales/deliveries/prefill` | Delivery form defaults |
-| `POST` | `/sales/deliveries` | Create direct delivery |
-| `GET` | `/sales/deliveries/{id}` | Read delivery note |
 | `GET` | `/sales/payments/prefill` | Payment form defaults + open invoices |
 | `POST` | `/sales/payments` | Record customer payment |
 | `GET` | `/sales/payments/{id}` | Read payment |
-| `GET` | `/purchasing/orders/prefill` | PO form defaults |
-| `POST` | `/purchasing/orders` | Create purchase order |
-| `GET` | `/purchasing/orders/{id}` | Read purchase order |
-| `GET` | `/inventory/transfers/prefill` | Transfer form defaults |
-| `POST` | `/inventory/transfers` | Create location transfer |
-| `GET` | `/inventory/transfers/{id}` | Read transfer |
+| `GET` | `/purchasing/invoices/prefill` | Supplier invoice form defaults (**not** `/purchasing/orders/prefill`) |
+| `POST` | `/purchasing/invoices` | Create direct supplier invoice (GRN + AP + stock in) |
+| `GET` | `/purchasing/invoices/{id}` | Read supplier invoice |
 | `GET` | `/inventory/adjustments/prefill` | Adjustment form defaults |
 | `POST` | `/inventory/adjustments` | Create inventory adjustment |
 | `GET` | `/inventory/adjustments/{id}` | Read adjustment |
+| `GET` | `/customers`, `/suppliers`, `/items` | Master data (read-only) |
+| `GET` | `/sales-types`, `/prices`, `/purchasing-data` | Price lists (read-only) |
+| `GET` | `/customers/{id}/prices`, `/suppliers/{id}/prices` | Resolved prices |
 | `GET` | `/items/{stock_id}/context` | Single-item price + QOH |
+
+**Removed (404):** `/sales/orders/*`, `/sales/deliveries/*`, `/purchasing/orders/*`, `/inventory/transfers/*`
+
+Full spec: [`openapi.yaml`](openapi.yaml) · Swagger UI: `/api/docs/`
 
 ---
 

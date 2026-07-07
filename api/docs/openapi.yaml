@@ -1,0 +1,975 @@
+openapi: 3.0.3
+info:
+  title: AVO'Gs FrontAccounting API — Retail
+  version: 2.3.1
+  description: |
+    Mobile-first REST API for small retail integrated with FrontAccounting.
+
+    **Read-only master data:** customers, suppliers, items, sales types (customer categories),
+    sales price matrix (`/prices` = FA inventory/prices.php),
+    supplier purchasing data (`/purchasing-data` = FA inventory/purchasing_data.php),
+    customer-specific resolved selling prices, supplier purchase prices.
+
+    **Transactions (retail):** direct sales invoice, customer payments, supplier invoice,
+    inventory adjustments.
+
+    **Not available (return 404):** sales orders, direct deliveries, purchase orders,
+    location transfers — removed for retail scope. Use `/sales/invoices/prefill` instead of
+    `/sales/orders/prefill`; use `/purchasing/invoices/prefill` instead of `/purchasing/orders/prefill`.
+
+    Swagger UI: `/api/docs/`
+
+    **Frontend developer guide:** `/api/docs/MOBILE_APP_GUIDE.md`
+
+servers:
+  - url: http://localhost:8090/api
+    description: Local
+  - url: https://{host}/api
+    variables:
+      host:
+        default: example.com
+
+tags:
+  - name: Auth
+  - name: Reference
+  - name: Sales Invoices
+  - name: Customer Payments
+  - name: Supplier Invoices
+  - name: Inventory Adjustments
+  - name: Items
+  - name: Prices
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204':
+          description: OK
+
+  /stores:
+    get:
+      tags: [Reference]
+      summary: List locations (read-only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Store'
+
+  /sales-types:
+    get:
+      tags: [Reference]
+      summary: List customer categories (sales types)
+      description: |
+        Customer category / price list used on FA **Inventory → Sales Pricing**
+        (`inventory/prices.php`). Each customer has a `sales_type_id`.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SalesType'
+
+  /customers:
+    get:
+      tags: [Reference]
+      summary: List customers (read-only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+
+  /customers/{id}:
+    get:
+      tags: [Reference]
+      summary: Get customer (read-only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/customerIdPath'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetail'
+        '404':
+          description: Not found
+
+  /customers/{id}/prices:
+    get:
+      tags: [Prices]
+      summary: Customer selling prices (resolved)
+      description: |
+        Uses the customer's **sales type** (category) and currency from `debtors_master`.
+        Returns `list_price` when a row exists in `0_prices` for that category, and
+        `unit_price` after FA `get_price()` fallbacks (base type × factor, FX, calculated cost).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/customerIdPath'
+        - name: stock_id
+          in: query
+          schema: { type: string }
+          description: Optional — return price for one item only
+        - $ref: '#/components/parameters/date'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerPriceList'
+
+  /suppliers:
+    get:
+      tags: [Reference]
+      summary: List suppliers (read-only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Supplier'
+
+  /suppliers/{id}:
+    get:
+      tags: [Reference]
+      summary: Get supplier (read-only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/supplierIdPath'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierDetail'
+
+  /suppliers/{id}/prices:
+    get:
+      tags: [Prices]
+      summary: Supplier purchasing data (by supplier)
+      description: |
+        Rows from `0_purch_data` for one supplier — same fields as FA
+        **Inventory → Purchasing Data** (`inventory/purchasing_data.php`).
+        Only items with purchasing data are returned (not every stock item).
+        `unit_price` = `price` ÷ `conversion_factor` (FA invoice cost).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/supplierIdPath'
+        - name: stock_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierPriceList'
+
+  /items:
+    get:
+      tags: [Items]
+      summary: List items (no prices)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/location'
+        - $ref: '#/components/parameters/date'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+
+  /items/{stock_id}:
+    get:
+      tags: [Items]
+      summary: Get one item
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/stockIdPath'
+        - $ref: '#/components/parameters/location'
+        - $ref: '#/components/parameters/date'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+
+  /prices:
+    get:
+      tags: [Prices]
+      summary: Sales price matrix (0_prices)
+      description: |
+        Mirrors FA **Inventory → Sales Pricing** (`inventory/prices.php`):
+        item × **sales type** (customer category) × currency.
+        Filter by `sales_type_id` to get all prices for a category.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: stock_id
+          in: query
+          schema: { type: string }
+        - name: sales_type_id
+          in: query
+          schema: { type: integer }
+        - name: currency
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BasePrice'
+
+  /purchasing-data:
+    get:
+      tags: [Prices]
+      summary: Supplier purchasing data (0_purch_data)
+      description: |
+        Mirrors FA **Inventory → Purchasing Data** (`inventory/purchasing_data.php`).
+        Filter by `stock_id` to list all suppliers for one item, or by `supplier_id`
+        for all items from one supplier.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: stock_id
+          in: query
+          schema: { type: string }
+          description: Item code — same picker as the FA screen
+        - name: supplier_id
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PurchasingDataRow'
+
+  /catalog:
+    get:
+      tags: [Reference]
+      summary: Item catalogue with prices (read-only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogItem'
+
+  /sales/invoices/prefill:
+    get:
+      tags: [Sales Invoices]
+      summary: Prefill direct sales invoice
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/customerId'
+        - $ref: '#/components/parameters/location'
+        - $ref: '#/components/parameters/date'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesInvoicePrefill'
+
+  /sales/invoices:
+    post:
+      tags: [Sales Invoices]
+      summary: Create direct sales invoice
+      description: Stock out + GL in one step. Auto-creates parent SO and delivery in FA.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalesDocumentCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceCreated'
+
+  /sales/invoices/{invoice_no}:
+    get:
+      tags: [Sales Invoices]
+      summary: Get sales invoice
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/invoiceNo'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesInvoice'
+
+  /sales/payments/prefill:
+    get:
+      tags: [Customer Payments]
+      summary: Prefill customer payment
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/customerId'
+        - $ref: '#/components/parameters/date'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentPrefill'
+
+  /sales/payments:
+    post:
+      tags: [Customer Payments]
+      summary: Record customer payment
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCreated'
+
+  /sales/payments/{payment_no}:
+    get:
+      tags: [Customer Payments]
+      summary: Get customer payment
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/paymentNo'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+
+  /purchasing/invoices/prefill:
+    get:
+      tags: [Supplier Invoices]
+      summary: Prefill direct supplier invoice
+      description: Maps to FA Direct Purchase Invoice (`?NewInvoice=Yes`).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: supplier_id
+          in: query
+          schema: { type: integer }
+        - $ref: '#/components/parameters/location'
+        - $ref: '#/components/parameters/date'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierInvoicePrefill'
+
+  /purchasing/invoices:
+    post:
+      tags: [Supplier Invoices]
+      summary: Create direct supplier invoice
+      description: Auto PO + GRN receive + AP invoice. Brings stock in and posts GL.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierInvoiceCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierInvoiceCreated'
+
+  /purchasing/invoices/{invoice_no}:
+    get:
+      tags: [Supplier Invoices]
+      summary: Get supplier invoice
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/supplierInvoiceNo'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierInvoice'
+
+  /inventory/adjustments/prefill:
+    get:
+      tags: [Inventory Adjustments]
+      summary: Prefill inventory adjustment
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/location'
+        - $ref: '#/components/parameters/date'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdjustmentPrefill'
+
+  /inventory/adjustments:
+    post:
+      tags: [Inventory Adjustments]
+      summary: Create inventory adjustment
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdjustmentCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdjustmentCreated'
+
+  /inventory/adjustments/{adjustment_no}:
+    get:
+      tags: [Inventory Adjustments]
+      summary: Get inventory adjustment
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/adjustmentNo'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Adjustment'
+
+  /items/{stock_id}/context:
+    get:
+      tags: [Items]
+      summary: Item price and QOH lookup
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: stock_id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/customerId'
+        - name: supplier_id
+          in: query
+          schema: { type: integer }
+        - $ref: '#/components/parameters/location'
+        - $ref: '#/components/parameters/date'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemContext'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  parameters:
+    customerId:
+      name: customer_id
+      in: query
+      schema: { type: integer, default: 1 }
+    location:
+      name: location
+      in: query
+      schema: { type: string }
+    date:
+      name: date
+      in: query
+      schema: { type: string, format: date }
+    customerIdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    supplierIdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    stockIdPath:
+      name: stock_id
+      in: path
+      required: true
+      schema: { type: string }
+    invoiceNo:
+      name: invoice_no
+      in: path
+      required: true
+      schema: { type: integer }
+    paymentNo:
+      name: payment_no
+      in: path
+      required: true
+      schema: { type: integer }
+    supplierInvoiceNo:
+      name: invoice_no
+      in: path
+      required: true
+      schema: { type: integer }
+    adjustmentNo:
+      name: adjustment_no
+      in: path
+      required: true
+      schema: { type: integer }
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            fields:
+              type: object
+              additionalProperties: { type: string }
+
+    LoginRequest:
+      type: object
+      required: [identifier, password]
+      properties:
+        identifier: { type: string, example: apiuser }
+        password: { type: string, format: password }
+        store: { type: string }
+
+    LoginResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user:
+          type: object
+          properties:
+            id: { type: integer }
+            login: { type: string }
+            name: { type: string }
+            role_id: { type: integer }
+        allowed_stores:
+          type: array
+          items: { type: string }
+
+    Store:
+      type: object
+      properties:
+        code: { type: string }
+        name: { type: string }
+
+    SalesType:
+      type: object
+      description: Customer category (price list) from FA sales_types
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        tax_included: { type: boolean }
+        factor: { type: number, description: Multiplier vs base sales type when no explicit price row exists }
+
+    Customer:
+      type: object
+      properties:
+        id: { type: integer }
+        branch_id: { type: integer }
+        name: { type: string }
+        currency: { type: string }
+        sales_type_id: { type: integer }
+        discount_percent: { type: number }
+
+    CustomerDetail:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        address: { type: string }
+        currency: { type: string }
+        sales_type_id: { type: integer }
+        sales_type: { type: string }
+        discount_percent: { type: number }
+        payment_terms: { type: integer }
+        credit_limit: { type: number }
+        tax_included: { type: boolean }
+        branches:
+          type: array
+          items:
+            type: object
+
+    Supplier:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        currency: { type: string }
+        tax_id: { type: string }
+
+    SupplierDetail:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        reference: { type: string }
+        currency: { type: string }
+        tax_id: { type: string }
+        address: { type: string }
+        payment_terms: { type: integer }
+        tax_included: { type: boolean }
+
+    Item:
+      type: object
+      properties:
+        stock_id: { type: string }
+        description: { type: string }
+        units: { type: string }
+        mb_flag: { type: string }
+        material_cost: { type: number }
+        category_id: { type: integer }
+        category_name: { type: string }
+        qoh: { type: number, nullable: true }
+
+    BasePrice:
+      type: object
+      description: One row from 0_prices (FA inventory/prices.php)
+      properties:
+        id: { type: integer }
+        stock_id: { type: string }
+        item_name: { type: string }
+        sales_type_id: { type: integer }
+        sales_type_name: { type: string }
+        currency: { type: string }
+        price: { type: number }
+
+    PurchasingDataRow:
+      type: object
+      description: One row from 0_purch_data (FA inventory/purchasing_data.php)
+      properties:
+        supplier_id: { type: integer }
+        supplier_name: { type: string }
+        stock_id: { type: string }
+        item_name: { type: string }
+        price: { type: number, description: Supplier list price in supplier UOM }
+        unit_price: { type: number, description: Price in item units (price ÷ conversion_factor) }
+        currency: { type: string }
+        suppliers_uom: { type: string }
+        conversion_factor: { type: number }
+        supplier_description: { type: string }
+
+    CustomerPriceList:
+      type: object
+      properties:
+        customer_id: { type: integer }
+        customer_name: { type: string }
+        currency: { type: string }
+        sales_type_id: { type: integer }
+        sales_type: { type: string }
+        date: { type: string, format: date }
+        prices:
+          type: array
+          items:
+            type: object
+            properties:
+              stock_id: { type: string }
+              item_name: { type: string }
+              list_price: { type: number, nullable: true, description: Explicit 0_prices row for customer sales type }
+              unit_price: { type: number, description: Resolved FA get_price() for invoicing }
+              currency: { type: string }
+              sales_type_id: { type: integer }
+
+    SupplierPriceList:
+      type: object
+      properties:
+        supplier_id: { type: integer }
+        supplier_name: { type: string }
+        currency: { type: string }
+        prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchasingDataRow'
+
+    CatalogItem:
+      type: object
+      properties:
+        stock_id: { type: string }
+        name: { type: string }
+        price: { type: integer }
+        unit: { type: string }
+
+    SalesLineInput:
+      type: object
+      required: [stock_id, quantity]
+      properties:
+        stock_id: { type: string }
+        quantity: { type: number }
+        unit_price: { type: number }
+        discount_percent: { type: number, default: 0 }
+
+    SalesDocumentCreate:
+      type: object
+      required: [customer_id, lines]
+      properties:
+        customer_id: { type: integer }
+        branch_id: { type: integer }
+        reference: { type: string }
+        document_date: { type: string, format: date }
+        location: { type: string }
+        due_date: { type: string, format: date }
+        lines:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/SalesLineInput'
+
+    SalesInvoicePrefill:
+      type: object
+      properties:
+        trans_type: { type: integer, example: 10 }
+        defaults: { type: object }
+        catalog:
+          type: array
+          items: { type: object }
+
+    InvoiceCreated:
+      type: object
+      properties:
+        invoice_no: { type: integer }
+        trans_type: { type: integer, example: 10 }
+        reference: { type: string }
+        total: { type: number }
+        gl_posted: { type: boolean }
+        lines: { type: array, items: { type: object } }
+
+    SalesInvoice:
+      allOf:
+        - $ref: '#/components/schemas/InvoiceCreated'
+        - type: object
+          properties:
+            customer_id: { type: integer }
+            amount: { type: number }
+            alloc: { type: number }
+
+    PaymentPrefill:
+      type: object
+      properties:
+        defaults: { type: object }
+        open_documents: { type: array, items: { type: object } }
+        bank_accounts: { type: array, items: { type: object } }
+
+    PaymentCreate:
+      type: object
+      required: [customer_id, bank_account, amount]
+      properties:
+        customer_id: { type: integer }
+        bank_account: { type: integer }
+        reference: { type: string }
+        document_date: { type: string, format: date }
+        amount: { type: number }
+        memo: { type: string }
+        allocations:
+          type: array
+          items:
+            type: object
+            properties:
+              trans_type: { type: integer }
+              trans_no: { type: integer }
+              amount: { type: number }
+
+    PaymentCreated:
+      type: object
+      properties:
+        payment_no: { type: integer }
+        reference: { type: string }
+        amount: { type: number }
+        gl_posted: { type: boolean }
+
+    Payment:
+      allOf:
+        - $ref: '#/components/schemas/PaymentCreated'
+        - type: object
+          properties:
+            allocations: { type: array, items: { type: object } }
+
+    SupplierInvoicePrefill:
+      type: object
+      properties:
+        trans_type: { type: integer, example: 20 }
+        defaults:
+          type: object
+          properties:
+            supplier_id: { type: integer }
+            supplier_name: { type: string }
+            location: { type: string }
+            document_date: { type: string, format: date }
+            due_date: { type: string, format: date }
+            reference: { type: string }
+        catalog:
+          type: array
+          items: { type: object }
+
+    PurchaseLineInput:
+      type: object
+      required: [stock_id, quantity]
+      properties:
+        stock_id: { type: string }
+        quantity: { type: number }
+        unit_price: { type: number }
+
+    SupplierInvoiceCreate:
+      type: object
+      required: [supplier_id, supplier_ref, location, lines]
+      properties:
+        supplier_id: { type: integer }
+        supplier_ref:
+          type: string
+          description: Supplier's own invoice number (required, unique per supplier)
+        reference: { type: string }
+        document_date: { type: string, format: date }
+        due_date: { type: string, format: date }
+        location: { type: string }
+        comments: { type: string }
+        lines:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PurchaseLineInput'
+
+    SupplierInvoiceCreated:
+      type: object
+      properties:
+        invoice_no: { type: integer }
+        trans_type: { type: integer, example: 20 }
+        reference: { type: string }
+        supplier_ref: { type: string }
+        supplier_id: { type: integer }
+        total: { type: number }
+        tax: { type: number }
+        gl_posted: { type: boolean, example: true }
+        lines: { type: array, items: { type: object } }
+
+    SupplierInvoice:
+      allOf:
+        - $ref: '#/components/schemas/SupplierInvoiceCreated'
+        - type: object
+          properties:
+            supplier_name: { type: string }
+            amount: { type: number }
+            alloc: { type: number }
+
+    AdjustmentPrefill:
+      type: object
+      properties:
+        trans_type: { type: integer, example: 17 }
+        defaults: { type: object }
+        catalog: { type: array, items: { type: object } }
+
+    AdjustmentCreate:
+      type: object
+      required: [location, lines]
+      properties:
+        location: { type: string }
+        reference: { type: string }
+        document_date: { type: string, format: date }
+        memo: { type: string }
+        lines:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [stock_id, quantity]
+            properties:
+              stock_id: { type: string }
+              quantity: { type: number, description: 'Positive=in, negative=out' }
+              standard_cost: { type: number }
+
+    AdjustmentCreated:
+      type: object
+      properties:
+        adjustment_no: { type: integer }
+        reference: { type: string }
+        gl_posted: { type: boolean }
+        lines: { type: array, items: { type: object } }
+
+    Adjustment:
+      allOf:
+        - $ref: '#/components/schemas/AdjustmentCreated'
+        - type: object
+          properties:
+            gl_summary: { type: array, items: { type: object } }
+
+    ItemContext:
+      type: object
+      properties:
+        stock_id: { type: string }
+        description: { type: string }
+        units: { type: string }
+        qoh: { type: number, nullable: true }
+        unit_price: { type: number }
+        supplier_price: { type: number }

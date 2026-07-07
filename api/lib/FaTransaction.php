@@ -43,8 +43,10 @@ class FaTransaction
         if (self::$purchasing_loaded) return;
         global $path_to_root;
         self::fa_include($path_to_root . '/purchasing/includes/purchasing_db.inc');
+        self::fa_include($path_to_root . '/includes/data_checks.inc');
         self::fa_include($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
         self::fa_include($path_to_root . '/purchasing/includes/db/po_db.inc');
+        self::fa_include($path_to_root . '/purchasing/includes/db/invoice_db.inc');
         self::fa_include($path_to_root . '/purchasing/includes/po_class.inc');
         self::$purchasing_loaded = true;
     }
@@ -54,6 +56,7 @@ class FaTransaction
         if (self::$inventory_loaded) return;
         global $path_to_root;
         self::fa_include($path_to_root . '/includes/db/inventory_db.inc');
+        self::fa_include($path_to_root . '/inventory/includes/db/items_prices_db.inc');
         self::fa_include($path_to_root . '/inventory/includes/db/items_transfer_db.inc');
         self::fa_include($path_to_root . '/inventory/includes/db/items_adjust_db.inc');
         self::$inventory_loaded = true;
@@ -242,6 +245,10 @@ class FaTransaction
         $cust = get_customer_to_order($customer_id);
         if (!$cust) {
             self::validation_error('Unknown customer_id.', array('customer_id' => 'Not found'));
+        }
+
+        if (!$branch_id) {
+            $branch_id = self::default_branch_id($customer_id);
         }
 
         $branch_res = get_branch_to_order($customer_id, $branch_id);

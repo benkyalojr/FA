@@ -228,8 +228,10 @@ class PaymentController
 
         // Bank transaction
         $bank_row = db_fetch(db_query(
-            "SELECT id, amount, bank_curr_code FROM " . TB_PREF . "bank_trans
-             WHERE trans_no=" . (int) $payment_no . " AND type=" . ST_CUSTPAYMENT
+            "SELECT bt.id, bt.amount, ba.bank_curr_code
+             FROM " . TB_PREF . "bank_trans bt
+             LEFT JOIN " . TB_PREF . "bank_accounts ba ON ba.id = bt.bank_act
+             WHERE bt.trans_no=" . (int) $payment_no . " AND bt.type=" . ST_CUSTPAYMENT
         ));
 
         // GL summary

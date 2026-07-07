@@ -68,7 +68,7 @@ foreach ($customers as $c) {
          credit_status, payment_terms, discount, pymt_discount, credit_limit, notes, inactive)
         VALUES (" . (int) $c[0] . ", " . db_escape($c[1]) . ", " . db_escape('C' . $c[0]) . ", '', '', "
         . db_escape($home) . ", 1, 0, 0, 1, 4, 0, 0, 0, '', 0)
-        ON DUPLICATE KEY UPDATE name=VALUES(name)", 'debtor seed');
+        ON DUPLICATE KEY UPDATE name=VALUES(name), curr_code=VALUES(curr_code)", 'debtor seed');
     // one branch per customer (only if missing)
     $has = (int) db_num_rows(db_query("SELECT branch_code FROM {$P}cust_branch WHERE debtor_no = " . (int) $c[0]));
     if (!$has) {
@@ -104,6 +104,11 @@ foreach ($catalog as $e) {
         . db_escape($acc['sales']) . ", " . db_escape($acc['cogs']) . ", " . db_escape($acc['inv']) . ", "
         . db_escape($acc['adj']) . ", " . db_escape($acc['wip']) . ", 0, 0, 0, 0, 1, 0)
         ON DUPLICATE KEY UPDATE description=VALUES(description)", 'item seed');
+    // FA sales/purchase combos join item_codes, not stock_master alone.
+    db_query("INSERT INTO {$P}item_codes
+        (item_code, stock_id, description, category_id, quantity, is_foreign, inactive)
+        VALUES (" . db_escape($sid) . ", " . db_escape($sid) . ", " . db_escape($desc) . ", 1, 1, 0, 0)
+        ON DUPLICATE KEY UPDATE description=VALUES(description)", 'item code seed');
     // stock at every location
     db_query("INSERT IGNORE INTO {$P}loc_stock (loc_code, stock_id)
         SELECT loc_code, " . db_escape($sid) . " FROM {$P}locations", 'locstock seed');

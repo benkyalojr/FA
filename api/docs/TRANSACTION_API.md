@@ -1,6 +1,11 @@
 # FrontAccounting Transaction API — Design & Flow
 
-This document describes how to build REST APIs for the seven FrontAccounting (FA) screens you listed. Each API follows the same **bidirectional pattern**:
+> **Retail scope (2026-07):** Only four transaction types are routed in `api/index.php`:
+> sales invoice, customer payment, supplier invoice, inventory adjustment.
+> Sales orders, deliveries, purchase orders, and transfers return **404**.
+> Authoritative route list: [`openapi.yaml`](openapi.yaml) and `GET /api/`.
+
+This document describes how to build REST APIs for FrontAccounting (FA) screens. Each API follows the same **bidirectional pattern**:
 
 1. **Prefill (read)** — resolve master data the UI needs *before* the user commits (customer-specific prices, QOH, defaults, open allocations, next reference, etc.).
 2. **Commit (write)** — call the same FA write functions the PHP screens use (`add_po`, `write_sales_invoice`, …).
@@ -773,44 +778,69 @@ Read `debtor_trans` (type 12) + `cust_allocations` + `bank_trans` + `gl_trans` s
 
 ---
 
-## Proposed route map
+## Route map (retail — current)
 
-Add these routes to `api/index.php` (grouped by domain):
+Implemented in `api/index.php` (OpenAPI 2.3.1):
 
 ```
 # Sales
-GET    /api/sales/orders/prefill
-POST   /api/sales/orders
-GET    /api/sales/orders/{id}
-
 GET    /api/sales/invoices/prefill
-POST   /api/sales/invoices          # replace shadow-table implementation
+POST   /api/sales/invoices
 GET    /api/sales/invoices/{id}
-
-GET    /api/sales/deliveries/prefill
-POST   /api/sales/deliveries
-GET    /api/sales/deliveries/{id}
 
 GET    /api/sales/payments/prefill
 POST   /api/sales/payments
 GET    /api/sales/payments/{id}
 
 # Purchasing
-GET    /api/purchasing/orders/prefill
-POST   /api/purchasing/orders
-GET    /api/purchasing/orders/{id}
+GET    /api/purchasing/invoices/prefill
+POST   /api/purchasing/invoices
+GET    /api/purchasing/invoices/{id}
 
 # Inventory
-GET    /api/inventory/transfers/prefill
-POST   /api/inventory/transfers
-GET    /api/inventory/transfers/{id}
-
 GET    /api/inventory/adjustments/prefill
 POST   /api/inventory/adjustments
 GET    /api/inventory/adjustments/{id}
 
-# Shared item lookup (optional convenience)
-GET    /api/items/{stock_id}/context?customer_id=&supplier_id=&location=&date=
+# Master data (read-only)
+GET    /api/customers, /suppliers, /items, /sales-types
+GET    /api/prices, /purchasing-data
+GET    /api/customers/{id}/prices, /suppliers/{id}/prices
+GET    /api/items/{stock_id}/context
+```
+
+**Removed (404):** `/sales/orders/*`, `/sales/deliveries/*`, `/purchasing/orders/*`, `/inventory/transfers/*`
+
+| Old call | Retail replacement |
+|----------|-------------------|
+| `GET /sales/orders/prefill` | `GET /sales/invoices/prefill` |
+| `GET /purchasing/orders/prefill` | `GET /purchasing/invoices/prefill` |
+
+---
+
+## Route map (historical — B2B / full FA)
+
+The sections below document the original seven-screen design. Controllers may still exist in the repo but routes are not registered for retail:
+
+```
+# Sales (not routed)
+GET    /api/sales/orders/prefill
+POST   /api/sales/orders
+GET    /api/sales/orders/{id}
+
+GET    /api/sales/deliveries/prefill
+POST   /api/sales/deliveries
+GET    /api/sales/deliveries/{id}
+
+# Purchasing (not routed)
+GET    /api/purchasing/orders/prefill
+POST   /api/purchasing/orders
+GET    /api/purchasing/orders/{id}
+
+# Inventory (not routed)
+GET    /api/inventory/transfers/prefill
+POST   /api/inventory/transfers
+GET    /api/inventory/transfers/{id}
 ```
 
 The **item context** endpoint returns price(s) and QOH in one round-trip when the client adds a line dynamically without reloading the full catalog.
