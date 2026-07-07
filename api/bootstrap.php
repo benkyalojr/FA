@@ -11,7 +11,24 @@ if (!defined('AVOGS_API')) {
     define('AVOGS_API', 1);
 }
 
-$AVOGS_CFG = require __DIR__ . '/config.php';
+$configFile = __DIR__ . '/config.php';
+if (!is_readable($configFile)) {
+    $hint = "Copy api/config.example.php to api/config.php and set fa_service_user / fa_service_pass.\n"
+        . "  cp api/config.example.php api/config.php";
+    if (PHP_SAPI === 'cli') {
+        fwrite(STDERR, "AVO'Gs API: missing config.php\n{$hint}\n");
+        exit(1);
+    }
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode(array('error' => array(
+        'code' => 'config_missing',
+        'message' => "api/config.php not found. {$hint}",
+    )));
+    exit;
+}
+
+$AVOGS_CFG = require $configFile;
 
 // We surface our own JSON errors; keep PHP/FA notices out of the response body.
 error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_WARNING & ~E_STRICT);
