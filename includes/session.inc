@@ -413,7 +413,16 @@ foreach ($installed_extensions as $ext)
 		include_once($path_to_root.'/'.$ext['path'].'/hooks.php');
 }
 
-ini_set('session.gc_maxlifetime', 36000); // moved from below.
+ini_set('session.gc_maxlifetime', 36000); // must be set before session_start()
+
+/*
+	Uncomment the setting below when using FA on shared hosting
+	to avoid unexpeced session timeouts.
+	Make sure this directory exists and is writable!
+*/
+if (is_dir(VARLIB_PATH) && is_writable(VARLIB_PATH)) {
+	ini_set('session.save_path', VARLIB_PATH);
+}
 
 $Session_manager = new SessionManager();
 $Session_manager->sessionStart('FA'.md5(dirname(__FILE__)), 0, '/', null, SECURE_ONLY);
@@ -444,17 +453,6 @@ if ($SysPrefs->error_logfile != '') {
 	ini_set("ignore_repeated_errors", "On");
 	ini_set("log_errors", "On");
 }
-
-/*
-	Uncomment the setting below when using FA on shared hosting
-	to avoid unexpeced session timeouts.
-	Make sure this directory exists and is writable!
-*/
-if (is_dir(VARLIB_PATH) && is_writable(VARLIB_PATH)) {
-	ini_set('session.save_path', VARLIB_PATH);
-}
-
-// ini_set('session.gc_maxlifetime', 36000); // 10hrs - moved to before session_manager
 
 hook_session_start(@$_POST["company_login_name"]);
 
