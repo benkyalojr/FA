@@ -641,7 +641,8 @@ Include `customer_id` **or** `supplier_id` depending on screen.
 
 Check-in captures opening stock counts, cash, photos, and comments for **FA inquiries and reports only** — it does **not** post inventory adjustments or GL entries.
 
-> **Short integration guide:** [`CHECKIN.md`](CHECKIN.md) — endpoint sequence and how photos are stored.
+> **Short integration guide:** [`CHECKIN.md`](CHECKIN.md) — endpoint sequence and how photos are stored.  
+> **Credit / pay later:** [`CREDIT_SALES.md`](CREDIT_SALES.md) — direct sales on credit + customer payments.
 
 ### Endpoints
 

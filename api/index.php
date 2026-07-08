@@ -19,6 +19,7 @@ $router->get('/', function ($req) {
         'docs'    => '/api/docs/',
         'guide'   => '/api/docs/MOBILE_APP_GUIDE.md',
         'checkin' => '/api/docs/CHECKIN.md',
+        'credit_sales' => '/api/docs/CREDIT_SALES.md',
         'transactions' => array(
             'sales_invoice'      => '/sales/invoices',
             'customer_payment'   => '/sales/payments',
