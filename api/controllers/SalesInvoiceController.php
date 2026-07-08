@@ -54,6 +54,15 @@ class SalesInvoiceController
             $cust['curr_code'], $cust['salestype'], $cust['factor']
         );
 
+        $payment_terms = FaTransaction::list_payment_terms();
+        $default_pt = null;
+        foreach ($payment_terms as $pt) {
+            if ((int) $pt['id'] === (int) $cust['payment_terms']) {
+                $default_pt = $pt;
+                break;
+            }
+        }
+
         Response::json(array(
             'trans_type' => ST_SALESINVOICE,
             'defaults' => array(
@@ -63,7 +72,9 @@ class SalesInvoiceController
                 'sales_type_name'           => $cust['sales_type'],
                 'currency'                  => $cust['curr_code'],
                 'default_discount_percent'  => (float) $cust['discount'],
-                'payment_terms'             => $cust['payment_terms'],
+                'payment_terms'             => (int) $cust['payment_terms'],
+                'payment_terms_name'        => $default_pt ? $default_pt['name'] : null,
+                'on_credit'                 => $default_pt ? !empty($default_pt['on_credit']) : false,
                 'location'                  => $location,
                 'document_date'             => $date,
                 'due_date'                  => $due_date,
@@ -75,6 +86,7 @@ class SalesInvoiceController
                 'dimension_id'              => (int) ($cust['dimension_id']  ?? 0),
                 'dimension2_id'             => (int) ($cust['dimension2_id'] ?? 0),
             ),
+            'payment_terms_options' => $payment_terms,
             'catalog' => $catalog,
         ));
     }
@@ -118,7 +130,6 @@ class SalesInvoiceController
         $inv_row  = FaTransaction::debtor_trans($invoice_no, ST_SALESINVOICE);
         if ($inv_row) {
             $auto_so = (int) $inv_row['order_'];
-            // Delivery is linked by order_ too (type 13)
             $dn_row = db_fetch(db_query(
                 "SELECT trans_no FROM " . TB_PREF . "debtor_trans
                  WHERE type=" . ST_CUSTDELIVERY . " AND order_=" . (int) $auto_so . "
@@ -129,6 +140,21 @@ class SalesInvoiceController
             }
         }
 
+        $payment_no = null;
+        if (!empty($body['payment']) && is_array($body['payment'])) {
+            $payment_no = FaTransaction::settle_invoice_payment(
+                $invoice_no,
+                (int) ($body['customer_id'] ?? 0),
+                (int) ($body['branch_id'] ?? FaTransaction::default_branch_id((int) ($body['customer_id'] ?? 0))),
+                $body['payment'],
+                $date
+            );
+            $inv_row = FaTransaction::debtor_trans($invoice_no, ST_SALESINVOICE);
+        }
+
+        $total = FaTransaction::invoice_total($inv_row);
+        $balance = FaTransaction::invoice_balance($inv_row);
+
         Response::json(array(
             'invoice_no'  => (int) $invoice_no,
             'trans_type'  => ST_SALESINVOICE,
@@ -137,11 +163,15 @@ class SalesInvoiceController
                 'sales_order_no' => $auto_so,
                 'delivery_no'    => $auto_dn,
             ),
-            'total'       => round($cart->get_items_total() + (float) ($body['freight_cost'] ?? 0), 2),
-            'tax'         => 0,
-            'gl_posted'   => true,
-            'stock_moves' => FaTransaction::stock_moves($invoice_no, ST_SALESINVOICE),
-            'lines'       => $line_out,
+            'total'         => round($total, 2),
+            'amount_paid'     => round($total - $balance, 2),
+            'balance_due'     => $balance,
+            'payment_status'  => $balance <= 0 ? 'paid' : 'pending',
+            'payment_no'      => $payment_no,
+            'tax'             => 0,
+            'gl_posted'       => true,
+            'stock_moves'     => FaTransaction::stock_moves($invoice_no, ST_SALESINVOICE),
+            'lines'           => $line_out,
         ), 201);
     }
 
@@ -197,7 +227,10 @@ class SalesInvoiceController
             'branch_id'     => (int) $header['branch_code'],
             'document_date' => $header['tran_date'],
             'due_date'      => $header['due_date'],
-            'amount'        => (float) $header['ov_amount'],
+            'amount'        => FaTransaction::invoice_total($header),
+            'amount_paid'   => round(FaTransaction::invoice_total($header) - FaTransaction::invoice_balance($header), 2),
+            'balance_due'   => FaTransaction::invoice_balance($header),
+            'payment_status'=> FaTransaction::invoice_balance($header) <= 0 ? 'paid' : 'pending',
             'tax'           => (float) $header['ov_gst'],
             'freight'       => (float) $header['ov_freight'],
             'alloc'         => (float) $header['alloc'],

@@ -303,7 +303,278 @@ class FaTransaction
         $cart->dimension2_id = (int) ($body['dimension2_id'] ?? $cust['dimension2_id'] ?? 0);
         $cart->prep_amount   = (float) ($body['prep_amount'] ?? 0);
 
+        if (isset($body['payment_terms'])) {
+            global $path_to_root;
+            if (!function_exists('get_payment_terms')) {
+                self::fa_include($path_to_root . '/admin/db/company_db.inc');
+            }
+            $pt_id = (int) $body['payment_terms'];
+            $terms = get_payment_terms($pt_id);
+            if (!$terms) {
+                self::validation_error('Unknown payment_terms.', array('payment_terms' => 'Not found'));
+            }
+            $cart->payment = $pt_id;
+            $cart->payment_terms = $terms;
+            $cart->due_date = get_invoice_duedate($pt_id, $cart->document_date);
+        } elseif (!empty($body['on_credit'])) {
+            $pt_id = self::default_credit_payment_terms();
+            if ($pt_id) {
+                global $path_to_root;
+                if (!function_exists('get_payment_terms')) {
+                    self::fa_include($path_to_root . '/admin/db/company_db.inc');
+                }
+                $terms = get_payment_terms($pt_id);
+                $cart->payment = $pt_id;
+                $cart->payment_terms = $terms;
+                $cart->due_date = get_invoice_duedate($pt_id, $cart->document_date);
+            }
+        }
+
         return $cart;
+    }
+
+    /** First non-cash payment term (for on_credit direct sales). */
+    public static function default_credit_payment_terms()
+    {
+        global $path_to_root;
+        if (!function_exists('get_payment_terms')) {
+            self::fa_include($path_to_root . '/admin/db/company_db.inc');
+        }
+        $res = db_query(
+            "SELECT terms_indicator FROM " . TB_PREF . "payment_terms WHERE !inactive ORDER BY terms_indicator"
+        );
+        while ($r = db_fetch($res)) {
+            $pt = get_payment_terms($r['terms_indicator']);
+            if ($pt && empty($pt['cash_sale'])) {
+                return (int) $r['terms_indicator'];
+            }
+        }
+        return 0;
+    }
+
+    /** Invoice total from a debtor_trans header row. */
+    public static function invoice_total($header)
+    {
+        if (!$header) {
+            return 0.0;
+        }
+        if (!empty($header['prep_amount'])) {
+            return (float) $header['prep_amount'];
+        }
+        return (float) $header['ov_amount'] + (float) $header['ov_gst']
+            + (float) $header['ov_freight'] + (float) $header['ov_freight_tax']
+            + (float) $header['ov_discount'];
+    }
+
+    public static function invoice_balance($header)
+    {
+        return round(self::invoice_total($header) - (float) $header['alloc'], 2);
+    }
+
+    /**
+     * Open AR documents allocatable to a customer payment (invoices, credits, …).
+     *
+     * @return array{documents: array, total_outstanding: float, invoice_count: int}
+     */
+    public static function open_customer_documents($customer_id, $invoices_only = false)
+    {
+        self::include_payment();
+        $alloc_res = get_allocatable_to_cust_transactions((int) $customer_id);
+        $documents = array();
+        $total = 0.0;
+        $invoice_count = 0;
+
+        while ($r = db_fetch($alloc_res)) {
+            $type = (int) $r['type'];
+            if ($invoices_only && $type !== ST_SALESINVOICE) {
+                continue;
+            }
+            $balance = round((float) $r['Total'] - (float) $r['alloc'], 2);
+            if ($balance <= 0) {
+                continue;
+            }
+            if ($type === ST_SALESINVOICE) {
+                $total += $balance;
+                $invoice_count++;
+            }
+            $documents[] = array(
+                'trans_type'    => $type,
+                'trans_no'      => (int) $r['trans_no'],
+                'reference'     => $r['reference'],
+                'document_date' => $r['tran_date'],
+                'due_date'      => $r['due_date'],
+                'amount'        => round((float) $r['Total'], 2),
+                'allocated'     => round((float) $r['alloc'], 2),
+                'balance'       => $balance,
+                'customer_ref'  => isset($r['customer_ref']) ? $r['customer_ref'] : null,
+            );
+        }
+
+        return array(
+            'documents'          => $documents,
+            'total_outstanding'  => round($total, 2),
+            'invoice_count'      => $invoice_count,
+        );
+    }
+
+    /**
+     * Record a customer payment and allocate to one or more open documents.
+     *
+     * @return array{payment_no: int, allocations: array}
+     */
+    public static function create_customer_payment($body)
+    {
+        self::include_payment();
+
+        $customer_id  = (int) ($body['customer_id'] ?? 0);
+        $branch_id    = (int) ($body['branch_id'] ?? 0);
+        $bank_account = (int) ($body['bank_account'] ?? 0);
+        $date         = $body['document_date'] ?? date('Y-m-d');
+        $amount       = (float) ($body['amount'] ?? 0);
+        $discount     = (float) ($body['discount'] ?? 0);
+        $bank_charge  = (float) ($body['bank_charge'] ?? 0);
+        $bank_amount  = (float) ($body['bank_amount'] ?? $amount);
+        $memo         = $body['memo'] ?? '';
+        $dim1         = (int) ($body['dimension_id'] ?? 0);
+        $dim2         = (int) ($body['dimension2_id'] ?? 0);
+
+        if (!$customer_id) {
+            self::validation_error('customer_id is required.', array('customer_id' => 'Required'));
+        }
+        if (!$branch_id) {
+            $branch_id = self::default_branch_id($customer_id);
+        }
+        if (!$bank_account) {
+            self::validation_error('bank_account is required.', array('bank_account' => 'Required'));
+        }
+        if ($amount <= 0) {
+            self::validation_error('amount must be > 0.', array('amount' => 'Must be positive'));
+        }
+        if (!self::valid_date($date)) {
+            self::validation_error('Invalid document_date.');
+        }
+
+        $fa_date = self::to_fa_date($date);
+        $ref = self::resolve_ref(isset($body['reference']) ? $body['reference'] : null, ST_CUSTPAYMENT);
+
+        $payment_no = write_customer_payment(
+            0, $customer_id, $branch_id, $bank_account,
+            $fa_date, $ref, $amount, $discount, $memo,
+            0, $bank_charge, $bank_amount, $dim1, $dim2
+        );
+
+        $allocations_out = self::apply_payment_allocations(
+            $payment_no, $customer_id, $amount,
+            isset($body['allocations']) ? $body['allocations'] : array()
+        );
+
+        return array(
+            'payment_no'  => (int) $payment_no,
+            'reference'   => $ref,
+            'allocations' => $allocations_out,
+        );
+    }
+
+    /** Apply allocation lines to an existing customer payment. */
+    public static function apply_payment_allocations($payment_no, $customer_id, $amount, $allocations_in)
+    {
+        self::include_payment();
+        $allocations_out = array();
+        if (empty($allocations_in)) {
+            return $allocations_out;
+        }
+
+        $alloc = new allocation(ST_CUSTPAYMENT, $payment_no, $customer_id, PT_CUSTOMER);
+        $alloc->amount = $amount;
+
+        foreach ($allocations_in as $a) {
+            $alloc_type   = (int) ($a['trans_type'] ?? ST_SALESINVOICE);
+            $alloc_no     = (int) ($a['trans_no'] ?? 0);
+            $alloc_amount = (float) ($a['amount'] ?? 0);
+
+            foreach ($alloc->allocs as &$alloc_item) {
+                if ($alloc_item->type == $alloc_type && $alloc_item->type_no == $alloc_no) {
+                    $remaining = $alloc_item->amount - $alloc_item->amount_allocated;
+                    $alloc_item->current_allocated = min($alloc_amount, $remaining);
+                    $allocations_out[] = array(
+                        'trans_type' => $alloc_type,
+                        'trans_no'   => $alloc_no,
+                        'allocated'  => $alloc_item->current_allocated,
+                    );
+                    break;
+                }
+            }
+            unset($alloc_item);
+        }
+
+        $alloc->write();
+        return $allocations_out;
+    }
+
+    /** Settle a sales invoice immediately after direct sale (cash/M-Pesa now). */
+    public static function settle_invoice_payment($invoice_no, $customer_id, $branch_id, $payment, $document_date)
+    {
+        self::include_payment();
+        $header = self::debtor_trans($invoice_no, ST_SALESINVOICE);
+        if (!$header) {
+            return null;
+        }
+        $balance = self::invoice_balance($header);
+        if ($balance <= 0) {
+            return null;
+        }
+
+        $bank_account = (int) ($payment['bank_account'] ?? 0);
+        $amount = isset($payment['amount']) ? (float) $payment['amount'] : $balance;
+        if ($amount <= 0 || !$bank_account) {
+            self::validation_error('payment.bank_account and payment.amount are required to settle now.');
+        }
+
+        $result = self::create_customer_payment(array(
+            'customer_id'   => $customer_id,
+            'branch_id'     => $branch_id,
+            'bank_account'  => $bank_account,
+            'document_date' => $document_date,
+            'amount'        => $amount,
+            'discount'      => (float) ($payment['discount'] ?? 0),
+            'bank_charge'   => (float) ($payment['bank_charge'] ?? 0),
+            'bank_amount'   => (float) ($payment['bank_amount'] ?? $amount),
+            'memo'          => $payment['memo'] ?? ('Settlement for invoice #' . $invoice_no),
+            'reference'     => isset($payment['reference']) ? $payment['reference'] : null,
+            'allocations'   => array(array(
+                'trans_type' => ST_SALESINVOICE,
+                'trans_no'   => (int) $invoice_no,
+                'amount'     => min($amount, $balance),
+            )),
+        ));
+
+        return (int) $result['payment_no'];
+    }
+
+    public static function list_payment_terms()
+    {
+        global $path_to_root;
+        if (!function_exists('get_payment_terms')) {
+            self::fa_include($path_to_root . '/admin/db/company_db.inc');
+        }
+        $res = db_query(
+            "SELECT terms_indicator FROM " . TB_PREF . "payment_terms WHERE !inactive ORDER BY terms_indicator"
+        );
+        $out = array();
+        while ($r = db_fetch($res)) {
+            $pt = get_payment_terms($r['terms_indicator']);
+            if (!$pt) {
+                continue;
+            }
+            $out[] = array(
+                'id'         => (int) $pt['terms_indicator'],
+                'name'       => $pt['terms'],
+                'days_due'   => (int) $pt['days_before_due'],
+                'cash_sale'  => !empty($pt['cash_sale']),
+                'on_credit'  => empty($pt['cash_sale']),
+            );
+        }
+        return $out;
     }
 
     /**

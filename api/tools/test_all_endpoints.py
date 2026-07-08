@@ -135,6 +135,8 @@ def main():
     # Prefill (retail)
     inv_prefill = req("GET", "/sales/invoices/prefill?customer_id=%d&location=%s" % (cid, loc), token=token)
     pay_prefill = req("GET", "/sales/payments/prefill?customer_id=%d" % cid, token=token)
+    req("GET", "/sales/invoices/pending?customer_id=%d" % cid, token=token)
+    req("GET", "/payment-terms", token=token)
     sup_prefill = req("GET", "/purchasing/invoices/prefill?supplier_id=%d&location=%s" % (sid, loc), token=token)
     adj_prefill = req("GET", "/inventory/adjustments/prefill?location=%s" % loc, token=token)
 

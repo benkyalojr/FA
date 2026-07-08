@@ -48,6 +48,7 @@ $router->get('/prices', array('CatalogController', 'prices'));
 $router->get('/purchasing-data', array('CatalogController', 'purchasingData'));
 $router->get('/catalog', array('ReferenceController', 'catalog'));
 $router->get('/payment-methods', array('ReferenceController', 'paymentMethods'));
+$router->get('/payment-terms', array('ReferenceController', 'paymentTerms'));
 $router->get('/shifts/definitions', array('ReferenceController', 'shifts'));
 
 // Inventory
@@ -71,8 +72,9 @@ $router->get('/sales/summary', array('SalesController', 'summary'));
 
 // ── Retail FA transaction APIs ───────────────────────────────────────────────
 
-// Direct sales invoice (cash-and-carry)
+// Direct sales invoice (cash-and-carry or on credit)
 $router->get('/sales/invoices/prefill', array('SalesInvoiceController', 'prefill'));
+$router->get('/sales/invoices/pending', array('PaymentController', 'pendingInvoices'));
 $router->post('/sales/invoices', array('SalesInvoiceController', 'create'));
 $router->get('/sales/invoices/{id}', array('SalesInvoiceController', 'show'));
 

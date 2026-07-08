@@ -354,14 +354,44 @@ paths:
               schema:
                 $ref: '#/components/schemas/SalesInvoice'
 
+  /sales/invoices/pending:
+    get:
+      tags: [Customer Payments]
+      summary: List pending (unpaid) sales invoices for a customer
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: customer_id
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Pending invoices with balances
+
+  /payment-terms:
+    get:
+      tags: [Reference]
+      summary: FA payment terms (cash vs credit)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: List of payment term options
+
   /sales/payments/prefill:
     get:
       tags: [Customer Payments]
       summary: Prefill customer payment
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: '#/components/parameters/customerId'
+        - name: customer_id
+          in: query
+          required: true
+          schema: { type: integer }
         - $ref: '#/components/parameters/date'
+        - name: allocate_to
+          in: query
+          schema: { type: integer }
+          description: Pre-select an invoice trans_no to allocate against
       responses:
         '200':
           content:

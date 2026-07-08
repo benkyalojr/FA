@@ -189,6 +189,13 @@ class ReferenceController
         Response::json(array('Cash', 'M-Pesa', 'Card', 'Credit'));
     }
 
+    /** FA payment terms (cash vs credit) for direct sales and AR. */
+    public static function paymentTerms(Request $req)
+    {
+        Auth::requireUser($req);
+        Response::json(FaTransaction::list_payment_terms());
+    }
+
     /** Shift definitions managed in FA maintenance (Items & Inventory). */
     public static function shifts(Request $req)
     {
