@@ -83,6 +83,7 @@ class PaymentController
 
         $open = FaTransaction::open_customer_documents($customer_id, false);
         $open_docs = $open['documents'];
+        $pending = FaTransaction::open_customer_documents($customer_id, true);
 
         $selected = null;
         if ($allocate_to) {
@@ -110,7 +111,8 @@ class PaymentController
                 'dimension2_id' => 0,
             ),
             'open_documents'    => $open_docs,
-            'pending_invoices'  => FaTransaction::open_customer_documents($customer_id, true)['documents'],
+            'pending_invoices'  => $pending['documents'],
+            'invoice_count'     => $pending['invoice_count'],
             'total_outstanding' => $open['total_outstanding'],
             'selected_document' => $selected,
             'bank_accounts'     => $bank_accounts,
