@@ -12,6 +12,22 @@
 $page_security = 'SA_OPEN';
 $path_to_root="..";
 
+// The installer runs before anything is configured, so a fatal error must never end as a
+// blank page: show what went wrong (and the PHP version) instead.
+ini_set('display_errors', '0');
+register_shutdown_function(function () {
+	$e = error_get_last();
+	if (!$e || !in_array($e['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR), true))
+		return;
+	while (ob_get_level()) @ob_end_clean();
+	if (!headers_sent()) header('Content-Type: text/html; charset=UTF-8');
+	echo '<!doctype html><meta charset="utf-8"><title>Installer error</title><body style="font:14px Arial;margin:30px;max-width:900px">'
+		. '<h2>The installer stopped with an error</h2><p>PHP '.htmlspecialchars(PHP_VERSION).'</p>'
+		. '<pre style="white-space:pre-wrap;background:#f6f6f6;padding:12px;border:1px solid #ddd">'
+		. htmlspecialchars($e['message'].' in '.$e['file'].' on line '.$e['line']).'</pre>'
+		. '<p>Send this message to your developer.</p></body>';
+});
+
 if (file_exists($path_to_root.'/config_db.php'))
 	header("Location: $path_to_root/index.php");
 
