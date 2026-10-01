@@ -137,8 +137,8 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 
 	$allow_demo_mode = false;
 
-    /* Whether to allow sending new password by e-mail */
-    $allow_password_reset = false;
+    /* Whether to allow sending a new password by SMS / e-mail (login page "Forgot password") */
+    $allow_password_reset = true;
 
 	/* for uploaded item pictures */
 	$pic_width 		= 80;

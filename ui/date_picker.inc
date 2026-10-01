@@ -20,11 +20,18 @@ function ma_date_picker_assets()
     $loaded = true;
     require_once $path_to_root.'/includes/date_functions.inc';
     require_once $path_to_root.'/admin/db/fiscalyears_db.inc';
-    $year = get_current_fiscalyear();
+    // The installer (and login) run before any company database is connected:
+    // the calendar then simply has no financial-year shortcuts.
+    $year = false;
     $previous = false;
-    if ($year) {
-        $result = db_query('SELECT begin, end FROM '.TB_PREF.'fiscal_year WHERE end < '.db_escape($year['begin']).' ORDER BY end DESC LIMIT 1', 'Could not read previous financial year');
-        $previous = db_fetch($result);
+    try {
+        $year = get_current_fiscalyear();
+        if ($year) {
+            $result = db_query('SELECT begin, end FROM '.TB_PREF.'fiscal_year WHERE end < '.db_escape($year['begin']).' ORDER BY end DESC LIMIT 1', 'Could not read previous financial year');
+            $previous = db_fetch($result);
+        }
+    } catch (Throwable $e) {
+        $year = $previous = false;
     }
     $labels = array();
     foreach (array('Date range','Choose date','From','To','Apply range','Apply date','Cancel','Today','Yesterday',
