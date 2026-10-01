@@ -507,6 +507,18 @@ if (isset($_POST['ProcessOrder']) && can_process()) {
 		}
 		$trans_no = key($_SESSION['Items']->trans_no);
 		$trans_type = $_SESSION['Items']->trans_type;
+		if (!$modified && $trans_type == ST_SALESINVOICE && get_company_pref('use_communications')) {
+			include_once($path_to_root . "/communications/includes/db/comm_send_db.inc");
+			include_once($path_to_root . "/communications/includes/db/comm_sales_db.inc");
+			comm_notify_sales_invoice($trans_no, $_SESSION['Items']);
+		}
+		if (!$modified && $trans_type == ST_CUSTDELIVERY && get_company_pref('use_communications')) {
+			include_once($path_to_root . "/communications/includes/db/comm_send_db.inc");
+			include_once($path_to_root . "/communications/includes/db/comm_workflow_db.inc");
+			comm_workflow_customer('direct_delivery', $_SESSION['Items']->customer_id, $_SESSION['Items']->Branch, array(
+				'delivery_no'=>$trans_no, 'amount'=>number_format((float)$_SESSION['Items']->get_trans_total(), 2), 'date'=>$_SESSION['Items']->document_date,
+			), array('trans_type'=>ST_CUSTDELIVERY,'trans_no'=>$trans_no));
+		}
 		new_doc_date($_SESSION['Items']->document_date);
 		processing_end();
 		if ($modified) {

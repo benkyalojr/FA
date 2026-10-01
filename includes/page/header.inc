@@ -95,7 +95,10 @@ function page_header($title, $no_menu=false, $is_index=false, $onload="", $js=""
 	if (in_ajax() || isset($_POST['REP_ID']))
 		return; // just for speed up
 
-	$theme = user_theme();
+	include_once($path_to_root . '/ui/renderer.php');
+	require_once $path_to_root.'/ui/date_picker.inc';
+	ma_date_picker_assets();
+	add_js_ufile($path_to_root . '/ui/workspace.js?v=' . filemtime($path_to_root . '/ui/workspace.js'));
 
 	if ($SysPrefs->help_base_url != null && $SysPrefs->use_popup_windows && $js == '')
 	{
@@ -136,13 +139,17 @@ function page_header($title, $no_menu=false, $is_index=false, $onload="", $js=""
 	if (!headers_sent()){
 		header("Content-type: text/html; charset=$encoding");
 	}
-	echo "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">\n";
-	echo "<html dir='" . $_SESSION['language']->dir . "' >\n";
-	echo "<head profile=\"http://www.w3.org/2005/10/profile\"><title>$title</title>";
-	if (strpos($_SERVER['HTTP_USER_AGENT'], 'Trident/7.0; rv:11.0') != -1) // IE 11 doesn't work with input file type in form.
-		echo "<meta http-equiv='X-UA-Compatible' content='IE=10'>\n";
+	echo "<!doctype html>\n";
+	$lang = $_SESSION['language']->code === 'C' ? 'en' : str_replace('_', '-', $_SESSION['language']->code);
+	echo "<html lang='".ma_ui_escape($lang)."' dir='" . ma_ui_escape($_SESSION['language']->dir) . "'>\n";
+	echo "<head><title>".ma_ui_escape(ma_ui_label($title))."</title>";
+	echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
 	echo "<meta http-equiv='Content-type' content='text/html; charset=$encoding'>";
-	echo "<link href='$path_to_root/themes/default/images/favicon.ico' rel='icon' type='image/x-icon'> \n";
+	echo "<link href='$path_to_root/ui/favicon.ico' rel='icon' type='image/x-icon'>\n";
+	echo "<link href='$path_to_root/ui/favicon-32x32.png' rel='icon' type='image/png' sizes='32x32'>\n";
+	echo "<link href='$path_to_root/ui/apple-touch-icon.png' rel='apple-touch-icon'>\n";
+	echo '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>';
+	echo '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">';
 
 	send_css($css);
 
@@ -150,13 +157,11 @@ function page_header($title, $no_menu=false, $is_index=false, $onload="", $js=""
 
 	echo "</head> \n";
 	if ($onload == "")
-		echo "<body>";
+		echo "<body class='ma-workspace-page'>";
 	else
-		echo "<body onload=\"$onload\">";
+		echo "<body class='ma-workspace-page' onload=\"$onload\">";
 
-	include_once($path_to_root . "/themes/$theme/renderer.php");
-	$rend = new renderer();
+	$rend = new ma_renderer();
 	$rend->menu_header($title, $no_menu, $is_index);
 	error_box();
 }
-

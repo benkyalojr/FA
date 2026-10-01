@@ -228,48 +228,34 @@ if (get_post('_OrderNumber_changed') || get_post('_OrderReference_changed')) // 
 
 start_form();
 
-start_table(TABLESTYLE_NOBORDER);
-start_row();
-ref_cells(_("#:"), 'OrderNumber', '',null, '', true);
-ref_cells(_("Ref"), 'OrderReference', '',null, '', true);
-
+ma_sales_filter_start();
+ma_sales_field(_('#'), function() { ref_cells(null, 'OrderNumber', '', null, '', true); });
+ma_sales_field(_('Reference'), function() { ref_cells(null, 'OrderReference', '', null, '', true); });
 if ($show_dates)
-    yesno_list_cells('', 'by_delivery', null, ($trans_type==ST_SALESORDER ? _("Delivery date") : _("Valid until")).':',
-         ($trans_type==ST_SALESORDER ? _("Order date") : _("Quotation date")).':');
-
-if ($show_dates)
-{
-  	date_cells(_("from:"), 'OrdersAfterDate', '', null, -user_transaction_days());
-  	date_cells(_("to:"), 'OrdersToDate', '', null, 1);
+	ma_sales_field(_('Date by'), function() use ($trans_type) {
+		yesno_list_cells('', 'by_delivery', null, ($trans_type==ST_SALESORDER ? _("Delivery date") : _("Valid until")),
+			($trans_type==ST_SALESORDER ? _("Order date") : _("Quotation date")));
+	});
+if ($show_dates) {
+	ma_sales_field(_('Date'), function() {
+		date_cells(null, 'OrdersAfterDate', '', null, -user_transaction_days());
+		date_cells(null, 'OrdersToDate', '', null, 1);
+	});
 }
-
-locations_list_cells(_("Location:"), 'StockLocation', null, true, true);
-
-if($show_dates) {
-	end_row();
-	end_table();
-
-	start_table(TABLESTYLE_NOBORDER);
-	start_row();
-}
-stock_items_list_cells(_("Item:"), 'SelectStockFromList', null, true, true);
-
+ma_sales_field(_('Location'), function() { locations_list_cells(null, 'StockLocation', null, true, true); });
+ma_sales_field(_('Item'), function() { stock_items_list_cells(null, 'SelectStockFromList', null, true, true); });
 if (!$page_nested)
-	customer_list_cells(_("Select a customer: "), 'customer_id', null, true, true);
+	ma_sales_field(_('Customer'), function() { customer_list_cells(null, 'customer_id', null, true, true); });
 if ($trans_type == ST_SALESQUOTE)
-	check_cells(_("Show All:"), 'show_all');
+	ma_sales_field('', function() { check_cells(_("Show all"), 'show_all'); }, 'ma-sales-check');
 if ($trans_type == ST_SALESORDER)
-	check_cells(_("Zero values"), 'show_voided');
+	ma_sales_field('', function() { check_cells(_("Zero values"), 'show_voided'); }, 'ma-sales-check');
 if ($show_dates && $trans_type == ST_SALESORDER)
-	check_cells(_("No auto"), 'no_auto');
-
-submit_cells('SearchOrders', _("Search"),'',_('Select documents'), 'default');
+	ma_sales_field('', function() { check_cells(_("No auto"), 'no_auto'); }, 'ma-sales-check');
 hidden('order_view_mode', $_POST['order_view_mode']);
 hidden('type', $trans_type);
-
-end_row();
-
-end_table(1);
+ma_sales_filter_end('SearchOrders', _('Select documents'));
+echo '<br>';
 //---------------------------------------------------------------------------------------------
 //	Orders inquiry table
 //

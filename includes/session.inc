@@ -154,11 +154,8 @@ function login_fail()
 	global $path_to_root;
 
 	header("HTTP/1.1 401 Authorization Required");
-	echo "<center><br><br><font size='5' color='red'><b>" . _("Incorrect Password") . "<b></font><br><br>";
-	echo "<b>" . _("The user and password combination is not valid for the system.") . "<b><br><br>";
-	echo _("If you are not an authorized user, please contact your system administrator to obtain an account to enable you to use the system.");
-	echo "<br><a href='$path_to_root/index.php'>" . _("Try again") . "</a>";
-	echo "</center>";
+	$auth_result = 'login_failed';
+	include $path_to_root . '/access/auth_result.php';
 	kill_login();
 	die();
 }
@@ -166,14 +163,8 @@ function login_fail()
 function password_reset_fail()
 {
 	global $path_to_root;
-	
-  	echo "<center><br><br><font size='5' color='red'><b>" . _("Incorrect Email") . "<b></font><br><br>";
-  	echo "<b>" . _("The email address does not exist in the system, or is used by more than one user.") . "<b><br><br>";
-
-  	echo _("Plase try again or contact your system administrator to obtain new password.");
-  	echo "<br><a href='$path_to_root/index.php?reset=1'>" . _("Try again") . "</a>";
-  	echo "</center>";
-
+	$auth_result = 'reset_failed';
+	include $path_to_root . '/access/auth_result.php';
 	kill_login();
 	die();
 }
@@ -181,13 +172,8 @@ function password_reset_fail()
 function password_reset_success()
 {
 	global $path_to_root;
-
-  	echo "<center><br><br><font size='5' color='green'><b>" . _("New password sent") . "<b></font><br><br>";
-  	echo "<b>" . _("A new password has been sent to your mailbox.") . "<b><br><br>";
-
-  	echo "<br><a href='$path_to_root/index.php'>" . _("Login here") . "</a>";
-  	echo "</center>";
-	
+	$auth_result = 'reset_sent';
+	include $path_to_root . '/access/auth_result.php';
 	kill_login();
 	die();
 }
@@ -195,6 +181,10 @@ function password_reset_success()
 function check_faillog()
 {
 	global $SysPrefs, $login_faillog;
+
+	// Rendering the login page is not a login attempt.
+	if (!isset($_POST['SubmitUser']))
+		return false;
 
 	$user = $_SESSION["wa_current_user"]->user;
 
@@ -285,6 +275,8 @@ function check_page_security($page_security)
 
 	if (!$_SESSION["wa_current_user"]->can_access_page($page_security))
 	{
+		$GLOBALS['system_audit_outcome']='access_denied';
+		system_audit_event('access_denied', array('permission'=>$page_security));
 
 		echo "<center><br><br><br><b>";
 		echo _("The security settings on your account do not permit you to access this function");
@@ -612,3 +604,4 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 // POST vars cleanup needed for direct reuse.
 // We quote all values later with db_escape() before db update.
 $_POST = strip_quotes($_POST);
+system_audit_request_start();

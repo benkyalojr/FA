@@ -14,7 +14,7 @@
 //
 function write_sales_invoice(&$invoice)
 {
-	global $Refs;
+	global $Refs, $path_to_root;
 
 	$trans_no = $invoice->trans_no;
 	if (is_array($trans_no))
@@ -217,6 +217,17 @@ function write_sales_invoice(&$invoice)
 	hook_db_postwrite($invoice, ST_SALESINVOICE);
 
 	commit_transaction();
+
+	// eTIMS: attempt to stamp this invoice with KRA right away (short
+	// timeout), falling back to the background task queue on any failure
+	// - run only after commit_transaction(), so the sale is already
+	// durable no matter what the provider does. No-op unless eTIMS stamping
+	// is switched on (see etims/manage/etims_config.php).
+	include_once($path_to_root.'/etims/includes/db/etims_config_db.inc');
+	if (etims_stamping_active()) {
+		include_once($path_to_root.'/etims/includes/db/etims_submit_db.inc');
+		etims_stamp_now_or_queue(ST_SALESINVOICE, $invoice_no);
+	}
 
 	return $invoice_no;
 }

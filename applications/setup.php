@@ -52,6 +52,8 @@ class setup_app extends application
 			"admin/crm_categories.php?", 'SA_CRMCATEGORY', MENU_MAINTENANCE);
 
 		$this->add_module(_("Maintenance"));
+		$this->add_lapp_function(2, _("System Audit Trail"),
+			"admin/system_audit.php", 'SA_SYSTEMAUDIT', MENU_INQUIRY);
 		$this->add_lapp_function(2, _("&Void a Transaction"),
 			"admin/void_transaction.php?", 'SA_VOIDTRANSACTION', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _("View or &Print Transactions"),
@@ -60,6 +62,8 @@ class setup_app extends application
 			"admin/attachments.php?filterType=20", 'SA_ATTACHDOCUMENT', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _("System &Diagnostics"),
 			"admin/system_diagnostics.php?", 'SA_SOFTWAREUPGRADE', MENU_SYSTEM);
+		$this->add_lapp_function(2, _("Background &Tasks"),
+			"admin/bg_tasks_inquiry.php?", 'SA_BGTASKS', MENU_INQUIRY);
 
 		$this->add_rapp_function(2, _("&Backup and Restore"),
 			"admin/backups.php?", 'SA_BACKUP', MENU_SYSTEM);
@@ -73,8 +77,28 @@ class setup_app extends application
 			"admin/inst_theme.php?", 'SA_CREATEMODULES', MENU_UPDATE);
 		$this->add_rapp_function(2, _("Install/Activate &Chart of Accounts"),
 			"admin/inst_chart.php?", 'SA_CREATEMODULES', MENU_UPDATE);
+		$this->add_rapp_function(2, _("Run Database &Migrations"),
+			"admin/run_migrations.php", 'SA_RUNMIGRATIONS', MENU_UPDATE);
 		$this->add_rapp_function(2, _("Software &Upgrade"),
 			"admin/inst_upgrade.php?", 'SA_SOFTWAREUPGRADE', MENU_UPDATE);
+
+		$this->add_module(_("eTIMS Integration"));
+		$this->add_lapp_function(3, _("eTIMS &Configuration"),
+			"etims/manage/etims_config.php?", 'SA_ETIMSSETUP', MENU_SETTINGS);
+		$this->add_lapp_function(3, _("eTIMS &Item Mapping"),
+			"etims/manage/etims_item_mapping.php?", 'SA_ETIMSITEMS', MENU_MAINTENANCE);
+		$this->add_lapp_function(3, _("eTIMS &X Report"),
+			"etims/manage/etims_x_report.php?", 'SA_ETIMSXREPORT', MENU_INQUIRY);
+		$this->add_lapp_function(3, _("eTIMS &Z Report (Close Day)"),
+			"etims/manage/etims_z_report.php?", 'SA_ETIMSZREPORT', MENU_MAINTENANCE);
+		$this->add_rapp_function(3, _("eTIMS &Submissions"),
+			"etims/inquiry/etims_submissions.php?", 'SA_ETIMSVIEW', MENU_INQUIRY);
+		$this->add_rapp_function(3, _("eTIMS &Products"),
+			"etims/inquiry/etims_products.php?", 'SA_ETIMSVIEW', MENU_INQUIRY);
+		$this->add_rapp_function(3, _("eTIMS S&ales"),
+			"etims/inquiry/etims_sales.php?", 'SA_ETIMSVIEW', MENU_INQUIRY);
+		$this->add_rapp_function(3, _("eTIMS &Credit Notes"),
+			"etims/inquiry/etims_credit_notes.php?", 'SA_ETIMSVIEW', MENU_INQUIRY);
 
 		$this->add_extensions();
 	}

@@ -186,7 +186,7 @@ function item_in_foreign_codes($stock_id)
 	return $msg;
 }
 
-function get_items_search($description, $type)
+function get_items_search($description, $type, $parent='')
 {
 	global $SysPrefs;
 
@@ -203,9 +203,16 @@ function get_items_search($description, $type)
 		case "sales":
 			$sql .= " AND !s.no_sale AND mb_flag <> 'F'";
 			break;
+		case "sales_local":
+			$sql .= " AND !s.no_sale AND mb_flag <> 'F' AND !i.is_foreign";
+			break;
 		case "manufactured":
 			$sql .= " AND mb_flag = 'M'";
 			break;
+        case "purchase_service":
+            $sql .= " AND NOT no_purchase AND mb_flag = 'D' AND i.item_code=i.stock_id";
+            break;
+        case "procurement":
     	case "purchasable":
     		$sql .= " AND NOT no_purchase AND mb_flag <> 'F' AND i.item_code=i.stock_id";
     		break;
@@ -213,8 +220,7 @@ function get_items_search($description, $type)
 			$sql .= " AND mb_flag <> 'D' AND mb_flag <> 'F' AND  i.item_code=i.stock_id";
 			break;
 		case "component":
-			$parent = $_GET['parent'];
-			$sql .= " AND  i.item_code=i.stock_id AND i.stock_id <> '$parent' AND mb_flag <> 'F' ";
+			$sql .= " AND i.item_code=i.stock_id AND i.stock_id <> ".db_escape($parent)." AND mb_flag <> 'F' ";
 			break;
 		case "kits":
 			$sql .= " AND !i.is_foreign AND i.item_code!=i.stock_id AND mb_flag <> 'F'";

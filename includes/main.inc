@@ -33,11 +33,23 @@ $js_lib = $js_userlib = array();
 function page($title, $no_menu=false, $is_index=false, $onload="", $js="", $script_only=false, $css='')
 {
 
-   	global $path_to_root, $page_security, $page_nested;
+   	global $path_to_root, $page_security, $page_nested, $SysPrefs;
 
 	if (++$page_nested) return;
 
    	$hide_menu = $no_menu;
+
+	// jQuery/Select2 must be queued before page_header() emits <script> tags,
+	// which happens before any combo_input() call in the page body runs.
+	// use_popup_search is the one preference controlling every select2
+	// enhancement combo_input() can render; the Search Item/Customer/Supplier
+	// List company preferences then pick which combos are enhanced.
+	if ($SysPrefs->use_popup_search) {
+		// The front page calls page() before ui.inc has been included.
+		if (!function_exists('ensure_select2_assets'))
+			include_once($path_to_root . "/includes/ui/ui_lists.inc");
+		ensure_select2_assets();
+	}
 
    	include_once($path_to_root . "/includes/page/header.inc");
 
@@ -73,9 +85,9 @@ function css_files_ensure_init() {
 
 	if (!isset($css_files))
 	{
-		$theme = user_theme();
 		$css_files = array();
-		$css_files[] = $path_to_root . "/themes/$theme/default.css";
+		foreach (array('design/tokens.css', 'components/workspace.css', 'components/forms.css', 'components/sales.css') as $asset)
+			$css_files[] = $path_to_root . '/ui/' . $asset . '?v=' . filemtime($path_to_root . '/ui/' . $asset);
 	}
 }
 

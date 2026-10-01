@@ -196,7 +196,7 @@ function get_supplier_currency($supplier_id)
 	return $myrow ? $myrow[0] : get_company_currency();
 }
 
-function get_suppliers_search($supplier)
+function get_suppliers_search($supplier, $active_only=false)
 {
 	global $SysPrefs;
 
@@ -210,7 +210,8 @@ function get_suppliers_search($supplier)
 		WHERE (supp_name LIKE " . db_escape("%" . $supplier. "%") . " OR 
 			supp_ref LIKE " . db_escape("%" . $supplier. "%") . " OR 
 			address LIKE " . db_escape("%" . $supplier. "%") . " OR 
-			gst_no LIKE " . db_escape("%" . $supplier. "%") . ")
+			gst_no LIKE " . db_escape("%" . $supplier. "%") . ")"
+		.($active_only ? " AND inactive=0" : "")."
 		ORDER BY supp_name LIMIT 0,".(int)($limit);
 
 	return db_query($sql, "Failed in retreiving supplier list.");

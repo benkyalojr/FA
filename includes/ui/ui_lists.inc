@@ -19,6 +19,27 @@ define('SEARCH_BUTTON', "<input %s type='submit' class='combo_submit' style='bor
 define('SELECT_BUTTON', "<input %s type='submit' class='combo_select' style='border:0;background:url($path_to_root/themes/"
 	."%s/images/button_ok.png) no-repeat;%s' aspect='fallback' name='%s' value=' ' title='"._("Select")."'> ");
 
+/*
+	Queue jQuery + Select2 (CDN) and our glue script exactly once per request.
+	Used to progressively enhance item/customer/supplier combos into live,
+	server-searched dropdowns when the corresponding "Search ... List" company
+	preference is on.
+*/
+function ensure_select2_assets()
+{
+	global $path_to_root;
+	static $done = false;
+
+	if ($done) return;
+	$done = true;
+
+	add_js_ufile('https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js');
+	add_css_file('https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css');
+	add_js_ufile('https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js');
+	add_js_file('select2_combo.js');
+	add_css_file($path_to_root.'/js/select2_combo.css');
+}
+
 //----------------------------------------------------------------------------
 //	Universal sql combo generator
 //	$sql must return selector values and selector texts in columns 0 & 1
@@ -61,7 +82,8 @@ $opts = array(		// default options
 	'category' => false, // category column name or false
 	'show_inactive' => false, // show inactive records. 
 	'editable' => false, // false, or length of editable entry field
-	'editlink' => false	// link to entity entry/edit page (optional)
+	'editlink' => false,	// link to entity entry/edit page (optional)
+	'select2_local' => false // true/name: enhance with select2, searching the already-rendered options - no server round trip (see the 'branch' case below, which this generalizes)
 );
 // ------ merge options with defaults ----------
 	if($options != null)
@@ -112,7 +134,8 @@ $opts = array(		// default options
 	$txt = get_post($search_box);
 	$rel = '';
 	$limit = '';
-	if (isset($_POST['_'.$name.'_update'])) { // select list or search box change
+	$selection_updated = isset($_POST['_'.$name.'_update']);
+	if ($selection_updated) { // select list or search box change
 		if ($by_id) $txt = $_POST[$name];
 
 		if (!$opts['async'])
@@ -131,7 +154,14 @@ $opts = array(		// default options
 
 		$rel = "rel='$search_box'"; // set relation to list
 		if ($opts['search_submit']) {
-			if (isset($_POST[$search_button])) {
+			// A selector change posts the exact chosen ID. Reload that row
+			// directly instead of feeding the companion search-box text back
+			// through a fuzzy LIKE filter, which can exclude the chosen option
+			// and make the combo snap back to its first result.
+			if ($selection_updated && isset($_POST[$name])) {
+				$opts['where'][] = $valfield . "=" . db_escape(get_post($name));
+				$txt = '';
+			} elseif (isset($_POST[$search_button])) {
 				$selected_id = array(); // ignore selected_id while search
 				if (!$opts['async'])
 					$Ajax->activate('_page_body');
@@ -232,7 +262,7 @@ $opts = array(		// default options
 		$first_opt = $spec_option;
 		$sel = $found===false ? 'selected' : '';
 		$optclass = @$contact_row['inactive'] ? "class='inactive'" : '';
-		$selector = "<option $sel value='$first_id'>$first_opt</option>\n"
+		$selector = "<option $sel value='$first_id' data-select2-static='1'>$first_opt</option>\n"
 			. $selector;
 	}
 
@@ -242,16 +272,97 @@ $opts = array(		// default options
 	
 	$_POST[$name] = $multi ? $selected_id : $selected_id[0];
 
+	// ------ select2 progressive enhancement ----------
+	// Only kicks in when both a search box and server-side search-on-submit
+	// are active for this combo, i.e. the corresponding "Search ... List"
+	// company preference is checked for item/customer/supplier combos.
+	$select2_entity = false;
+	$select2_type = '';
+	if ($SysPrefs->use_popup_search && $search_box !== false && $opts['search_submit'] !== false && $type !== null) {
+		switch (strtolower($type)) {
+			case "stock":
+				$select2_entity = 'item'; $select2_type = $opts['select2_type'] ?? 'all'; break;
+			case "stock_manufactured":
+				$select2_entity = 'item'; $select2_type = 'manufactured'; break;
+			case "stock_purchased":
+				$select2_entity = 'item'; $select2_type = 'purchasable'; break;
+			case "stock_sales":
+				$select2_entity = 'item'; $select2_type = 'sales'; break;
+			case "stock_sales_local":
+				$select2_entity = 'item'; $select2_type = 'sales_local'; break;
+			case "stock_costable":
+				$select2_entity = 'item'; $select2_type = 'costable'; break;
+			case "component":
+				$select2_entity = 'item'; $select2_type = 'component'; break;
+			case "kits":
+				$select2_entity = 'item'; $select2_type = 'kits'; break;
+			case "customer":
+				$select2_entity = 'customer'; break;
+			case "supplier":
+				$select2_entity = 'supplier';
+				if (!empty($opts['select2_type'])) $select2_type = $opts['select2_type'];
+				break;
+			case "account":
+				$select2_entity = 'account';
+				break;
+			case "account2":
+				$select2_entity = 'account';
+				$select2_type = 'skip_bank';
+				break;
+		}
+	}
+
+	// Branches already contain the selected customer's allowed options.
+	// Search that list locally so its customer and inactive filters are kept.
+	$select2_local = false;
+	if ($SysPrefs->use_popup_search && $type === 'branch' && get_company_pref('no_customer_list')) {
+		$select2_entity = 'branch';
+		$select2_local = true;
+	}
+	// Generic version of the same "options already scoped by PHP, just search
+	// them locally" case, for any combo (not only customer branches) that opts
+	// in via $opts['select2_local'] - e.g. the Farmer form's Bank/Branch
+	// directory pickers, already filtered to the chosen bank server-side.
+	if ($SysPrefs->use_popup_search && !empty($opts['select2_local'])) {
+		$select2_entity = is_string($opts['select2_local']) ? $opts['select2_local'] : 'local';
+		$select2_local = true;
+	}
+
+	$select2_attrs = '';
+	$select2_class = $class;
+	if ($select2_entity !== false) {
+		ensure_select2_assets();
+		// NB: not a "data-*" attribute selector - FA's Behaviour.js selector
+		// engine regex only captures \w+ for attribute names, so it can't
+		// match hyphenated attribute names like data-select2-entity. Use a
+		// plain class (deliberately not containing "combo") for JS pickup,
+		// and read the data-* attributes directly via getAttribute() in JS.
+		$select2_class .= ' fa-select2';
+		$select2_attrs = " data-select2-entity='$select2_entity' data-select2-url='"
+			.$path_to_root."/includes/ajax/select2_search.php'";
+		if (in_array($select2_entity, array('customer', 'supplier', 'account'), true)
+				&& !$opts['show_inactive']) $select2_attrs .= " data-select2-active='1'";
+		if ($select2_local)
+			$select2_attrs .= " data-select2-local='1'";
+		if ($select2_type !== '')
+			$select2_attrs .= " data-select2-type='$select2_type'";
+		if ($select2_entity == 'account' && isset($opts['select2_account_type'])
+				&& $opts['select2_account_type'] !== false && $opts['select2_account_type'] !== '')
+			$select2_attrs .= " data-select2-account-type='".(int)$opts['select2_account_type']."'";
+		if ($select2_entity == 'item' && $select2_type == 'component' && isset($opts['parent']))
+			$select2_attrs .= " data-select2-parent='".htmlspecialchars((string)$opts['parent'], ENT_QUOTES, 'UTF-8')."'";
+	}
+
 	if ($SysPrefs->use_popup_search)
 		$selector = "<select id='$name' autocomplete='off' ".($multi ? "multiple" : '')
 		. ($opts['height']!==false ? ' size="'.$opts['height'].'"' : '')
-		. "$disabled name='$name".($multi ? '[]':'')."' class='$class' title='"
-		. $opts['sel_hint']."' $rel>".$selector."</select>\n";
+		. "$disabled name='$name".($multi ? '[]':'')."' class='$select2_class' title='"
+		. $opts['sel_hint']."' $rel$select2_attrs>".$selector."</select>\n";
 	else
 		$selector = "<select autocomplete='off' ".($multi ? "multiple" : '')
 		. ($opts['height']!==false ? ' size="'.$opts['height'].'"' : '')
-		. "$disabled name='$name".($multi ? '[]':'')."' class='$class' title='"
-		. $opts['sel_hint']."' $rel>".$selector."</select>\n";
+		. "$disabled name='$name".($multi ? '[]':'')."' class='$select2_class' title='"
+		. $opts['sel_hint']."' $rel$select2_attrs>".$selector."</select>\n";
 	if ($by_id && ($search_box != false || $opts['editable']) ) {
 		// on first display show selector list
 		if (isset($_POST[$search_box]) && $opts['editable'] && $edit) {
@@ -305,7 +416,7 @@ $opts = array(		// default options
   			if ($type != NULL) {
 	    		switch (strtolower($type)) {
 	      			case "stock":
-	        			$link = $path_to_root . "/inventory/inquiry/stock_list.php?popup=1&type=all&client_id=" . $id;
+				$link = $path_to_root . "/inventory/inquiry/stock_list.php?popup=1&type=".urlencode($opts['select2_type'] ?? 'all')."&client_id=" . $id;
 	        			$img_title = _("Search items");
 	        			break;
 	      			case "stock_manufactured":
@@ -343,6 +454,8 @@ $opts = array(		// default options
 	        			break;
 	      			case "supplier":
 	        			$link = $path_to_root . "/purchasing/inquiry/suppliers_list.php?popup=1&client_id=" . $id;
+					if (isset($opts['select2_type']) && $opts['select2_type'] !== '')
+						$link .= "&type=".urlencode($opts['select2_type']);
 	        			$img_title = _("Search suppliers");
 	        			break;
 	      			case "account":

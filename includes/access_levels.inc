@@ -56,6 +56,10 @@ define('SS_GL_C',	61<<8);
 define('SS_GL',		62<<8);
 define('SS_GL_A',	63<<8);
 
+define('SS_COMMS_C',90<<8); // communications configuration
+define('SS_COMMS',	91<<8);	// communications sending
+define('SS_COMMS_A',92<<8); // communications log
+
 $security_sections = array(
  	SS_SADMIN => _("System administration"),
  	SS_SETUP => _("Company setup"),
@@ -79,7 +83,10 @@ $security_sections = array(
  	SS_DIM => _("Dimensions"),
  	SS_GL_C => _("Banking & GL configuration"),
  	SS_GL => _("Banking & GL transactions"),
- 	SS_GL_A => _("Banking & GL analytics")
+ 	SS_GL_A => _("Banking & GL analytics"),
+	SS_COMMS_C => _("Communications configuration"),
+	SS_COMMS => _("Communications sending"),
+	SS_COMMS_A => _("Communications analytics")
 );
 
 /*
@@ -118,6 +125,14 @@ $security_areas =array(
 	'SA_WORKCENTRES' => array(SS_SETUP|12, _("Manufacture work centres")),
 	'SA_FORMSETUP' => array(SS_SETUP|13, _("Forms setup")),
 	'SA_CRMCATEGORY' => array(SS_SETUP|14, _("Contact categories")),
+	'SA_RUNMIGRATIONS' => array(SS_SETUP|15, _("Run database migrations")),
+	'SA_BGTASKS' => array(SS_SETUP|16, _("Background task queue inquiry")),
+	'SA_ETIMSSETUP' => array(SS_SETUP|17, _("eTIMS integration setup")),
+	'SA_ETIMSITEMS' => array(SS_SETUP|18, _("eTIMS item mapping")),
+	'SA_ETIMSVIEW' => array(SS_SETUP|19, _("eTIMS submissions inquiry")),
+	'SA_ETIMSXREPORT' => array(SS_SETUP|20, _("eTIMS X report")),
+	'SA_ETIMSZREPORT' => array(SS_SETUP|21, _("eTIMS Z report (closes the day)")),
+	'SA_SYSTEMAUDIT' => array(SS_SETUP|22, _("System audit trail")),
 //
 // Special and common functions
 //
@@ -269,6 +284,15 @@ $security_areas =array(
 	'SA_TAXREP' => array(SS_GL_A|2, _("Tax reports and inquiries")),
 	'SA_BANKREP' => array(SS_GL_A|3, _("Bank reports and inquiries")),
 	'SA_GLREP' => array(SS_GL_A|4, _("GL reports and inquiries")),
+//
+// Communications
+//
+	'SA_COMMSETUP' => array(SS_COMMS_C|1, _("Communications module setup and gateway settings")),
+	'SA_COMMTEMPLATES' => array(SS_COMMS_C|2, _("Message templates")),
+	'SA_COMMRULES' => array(SS_COMMS_C|3, _("Notification rules (which events fire on which channel)")),
+	'SA_COMMRECIPIENTPREFS' => array(SS_COMMS_C|4, _("Recipient opt-in / opt-out preferences")),
+	'SA_COMMSEND' => array(SS_COMMS|1, _("Send test messages")),
+	'SA_COMMLOG' => array(SS_COMMS_A|1, _("Communications delivery log")),
 );
 
 if (!@$SysPrefs->allow_gl_reopen)
@@ -284,6 +308,8 @@ if (!@$SysPrefs->allow_gl_reopen)
 function add_access_extensions()
 {
 	global $security_areas, $security_sections, $installed_extensions;
+
+	if (!is_array($installed_extensions)) return;
 
 	foreach($installed_extensions as $extid => $ext) {
 		$accext = hook_invoke($ext['package'], 'install_access', $dummy);

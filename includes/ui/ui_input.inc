@@ -636,6 +636,7 @@ function date_cells($label, $name, $title = null, $check=null, $inc_days=0,
 	$inc_months=0, $inc_years=0, $params=null, $submit_on_change=false)
 {
 	global $path_to_root, $Ajax;
+	require_once __DIR__.'/../../ui/date_picker.inc';
 
 	if (!isset($_POST[$name]) || $_POST[$name] == "")
 	{
@@ -664,9 +665,9 @@ function date_cells($label, $name, $title = null, $check=null, $inc_days=0,
 		$post_label = "";
 
 	if ($label != null)
-		label_cell($label, $params);
+		label_cell($label, $params.' data-ma-date-label="'.htmlspecialchars($name, ENT_QUOTES, 'UTF-8').'"');
 
-	echo "<td>";
+	echo '<td data-ma-date-cell="true">';
 	
 	$class = $submit_on_change ? 'date active' : 'date';
 
@@ -676,7 +677,7 @@ function date_cells($label, $name, $title = null, $check=null, $inc_days=0,
 
 	default_focus($name);
 	$size = (user_date_format()>3)?11:10; 
-	echo "<input type=\"text\" name=\"$name\" class=\"$class\" $aspect size=\"$size\" maxlength=\"12\" value=\"" 
+	echo '<input'.ma_date_attributes($name)." type=\"text\" name=\"$name\" class=\"$class\" $aspect size=\"$size\" maxlength=\"12\" value=\""
 	 . $_POST[$name]. "\""
 	 .($title ? " title='$title'": '')." > $post_label";
 	echo "</td>\n";
@@ -686,7 +687,7 @@ function date_cells($label, $name, $title = null, $check=null, $inc_days=0,
 function date_row($label, $name, $title=null, $check=null, $inc_days=0, $inc_months=0, 
 	$inc_years=0, $params=null, $submit_on_change=false)
 {
-	echo "<tr><td class='label'>$label</td>";
+	echo "<tr><td class='label' data-ma-date-label='".htmlspecialchars($name, ENT_QUOTES, 'UTF-8')."'>$label</td>";
 	date_cells(null, $name, $title, $check, $inc_days, $inc_months, 
 		$inc_years, $params, $submit_on_change);
 	echo "</tr>\n";

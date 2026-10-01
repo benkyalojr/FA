@@ -23,7 +23,8 @@ if ($SysPrefs->use_popup_windows && $SysPrefs->use_popup_search)
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
 
-add_js_file('reports.js');
+add_css_file($path_to_root.'/ui/components/reports.css?v='.filemtime($path_to_root.'/ui/components/reports.css'));
+add_js_ufile($path_to_root.'/ui/reports.js?v='.filemtime($path_to_root.'/ui/reports.js'));
 
 page(_($help_context = "Reports and Analysis"), false, false, "", $js);
 

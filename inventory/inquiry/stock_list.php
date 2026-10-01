@@ -55,7 +55,7 @@ table_header($th);
 
 $k = 0;
 $name = $_GET["client_id"];
-$result = get_items_search(get_post("description"), @$_GET['type']);
+$result = get_items_search(get_post("description"), @$_GET['type'], (string)@$_GET['parent']);
 
 while ($myrow = db_fetch_assoc($result))
 {

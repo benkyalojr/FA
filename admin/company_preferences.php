@@ -148,6 +148,8 @@ if (isset($_POST['update']) && $_POST['update'] != "")
 		$_POST['round_to'] = 1;
 	if ($input_error != 1)
 	{
+		if (get_company_pref('use_communications') === null)
+			set_company_pref('use_communications', 'setup.company', 'tinyint', 1, '0');
 		update_company_prefs(
 			get_post( array('coy_name','coy_no','gst_no','tax_prd','tax_last',
 				'postal_address','phone', 'fax', 'email', 'coy_logo', 'domicile',
@@ -156,7 +158,7 @@ if (isset($_POST['update']) && $_POST['update'] != "")
 				'base_sales', 'ref_no_auto_increase' => 0, 'dim_on_recurrent_invoice' => 0, 'long_description_invoice' => 0, 'max_days_in_docs' => 180, 'company_logo_on_views' => 0,
 				'time_zone' => 0, 'company_logo_report' => 0, 'barcodes_on_stock' => 0, 'print_dialog_direct' => 0, 
 				'add_pct', 'round_to', 'login_tout', 'auto_curr_reval', 'bcc_email', 'alternative_tax_include_on_docs', 
-				'suppress_tax_rates', 'use_manufacturing', 'use_fixed_assets'))
+				'suppress_tax_rates', 'use_manufacturing', 'use_fixed_assets', 'use_communications' => 0))
 		);
 
 		$_SESSION['wa_current_user']->timeout = $_POST['login_tout'];
@@ -256,6 +258,7 @@ $_POST['alternative_tax_include_on_docs']  = $myrow["alternative_tax_include_on_
 $_POST['suppress_tax_rates']  = $myrow["suppress_tax_rates"];
 $_POST['use_manufacturing']  = $myrow["use_manufacturing"];
 $_POST['use_fixed_assets']  = $myrow["use_fixed_assets"];
+$_POST['use_communications']  = isset($myrow["use_communications"]) ? $myrow["use_communications"] : 0;
 
 start_outer_table(TABLESTYLE2);
 
@@ -312,6 +315,7 @@ label_row("", "&nbsp;");
 table_section_title(_("Optional Modules"));
 check_row(_("Manufacturing"), 'use_manufacturing', null);
 check_row(_("Fixed Assets"), 'use_fixed_assets', null);
+check_row(_("Communications"), 'use_communications', null);
 number_list_row(_("Use Dimensions:"), 'use_dimension', null, 0, 2);
 
 table_section_title(_("User Interface Options"));

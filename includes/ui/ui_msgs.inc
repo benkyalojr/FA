@@ -11,6 +11,7 @@
 ***********************************************************************/
 function display_error($msg, $center=true)
 {
+	$GLOBALS['system_audit_outcome']='application_error';
 	 fa_trigger_error($msg, E_USER_ERROR);
 }
 

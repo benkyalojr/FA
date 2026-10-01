@@ -34,8 +34,13 @@ if (user_use_date_picker()) {
 }
 
 if(isset($_GET['NewCredit'])) {
-	$_SESSION['page_title'] = _($help_context = "Customer Credit Note");
-	handle_new_credit(0);
+	// There are no free-hand credit notes: a credit note is always raised
+	// against an invoice (Customer Transactions > Credit This).
+	page(_($help_context = "Customer Credit Note"), false, false, "", $js);
+	display_note(_("Credit notes are raised against an invoice. Open the invoice in the list below and choose 'Credit This'."), 1);
+	hyperlink_params($path_to_root."/sales/inquiry/customer_inquiry.php", _("Go to &Invoices"), "filterType=1");
+	end_page();
+	exit;
 } elseif (isset($_GET['ModifyCredit'])) {
 	$_SESSION['page_title'] = sprintf(_("Modifying Customer Credit Note #%d"), $_GET['ModifyCredit']);
 	handle_new_credit($_GET['ModifyCredit']);
@@ -72,7 +77,6 @@ if (isset($_GET['AddedID'])) {
 
 	display_note(get_gl_view_str($trans_type, $credit_no, _("View the GL &Journal Entries for this Credit Note")));
 
-	hyperlink_params($_SERVER['PHP_SELF'], _("Enter Another &Credit Note"), "NewCredit=yes");
 
 	hyperlink_params("$path_to_root/admin/attachments.php", _("Add an Attachment"), "filterType=$trans_type&trans_no=$credit_no");
 

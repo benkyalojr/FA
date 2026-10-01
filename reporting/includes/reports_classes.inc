@@ -29,11 +29,12 @@ class BoxReports
 	function __construct()
 	{
 		$this->ar_classes = array();
+		$this->ar_reports = array();
 	}
 
 	function addReportClass($class_name, $class_id=null)
 	{
-		if (!$class_id)
+		if ($class_id === null)
 			$class_id = count_array($this->ar_classes);
 		$this->ar_classes[$class_id] = $class_name;
 
@@ -55,81 +56,20 @@ class BoxReports
 			return;
 		}
 
-		$temp = array_values($this->ar_classes);
-		$display_class = $class==null ? $temp[0] : $this->ar_classes[$class];
-		$st_reports = "";
-		$st_params = "";
-		$st_classes = "<b>" . _("Report Classes:") . "</b><br>";
-
-		if (isset($_GET['Class']))
-			set_focus('class'.$_GET['Class']);
-
-		$cur_class = $_REQUEST['Class'];
-
-		foreach($this->ar_classes as $class_id => $name)
-		{
-			if (!isset($this->ar_reports[$class_id]))
-				continue; // e.g. no dimensions
-
-			$acc = access_string($name);
-			$st_classes .= "<a href='"
-				.$_SERVER['PHP_SELF']."?Class=$class_id'"
-				." style='font-weight:". ($cur_class == $class_id ? 'bold' : 'normal')."'"
-				." class='repclass_link' id='".'class'.$class_id."'"
-				."$acc[1]>$acc[0]</a> <br>";
-
-			$style = $class_id==$cur_class ? '' : "style='display:none'";
-			$st_reports .= "<table class='repclass' id='TAB_" . $class_id ."' $style cellpadding='0' cellspacing='0' border='0' width='100%'><tr><td><b>" . _("Reports For Class: ") . "&nbsp;$name</b></td></tr>\n";
-			foreach($this->ar_reports[$class_id] as $rep_id => $report)
-			{
-				$acc = access_string($report->name);
-				$st_reports .= "<tr><td><a class='repopts_link'"
-					." href='".$_SERVER['PHP_SELF']."?Class=$class_id&REP_ID=$report->id'"
-					." style='font-weight:". (@$_REQUEST['REP_ID'] == $report->id ? 'bold' : 'normal')."'"
-					." id='".$id = default_focus()."'"
-					."$acc[1]>$acc[0]</a><tr><td>\n";
-
-				if (@$_REQUEST['REP_ID'] == $report->id) {
-					$Ajax->activate($id);
-				}
-
-				if (isset($_REQUEST['REP_ID']) && $_REQUEST['REP_ID']==$report->id) {
-					// parameters form
-					$action = $_SERVER['PHP_SELF'];
-					$st_params = "<table><tr><td>\n"
-						. "<form method='POST' action='$action' target='_blank'>\n";
-					$st_params .= submit('Rep'.$report->id,  
-						_("Display: ") . access_string($report->name, true),
-						false, '', $SysPrefs->pdf_debug ? false : 'default process popup') . hidden('REP_ID', $report->id, false).'<br><br>';
-					$st_params .= $this->getOptions($report->get_controls(), $report->id);
-					$st_params .= "\n<input type=hidden name='Class' value=".$cur_class.">"
-						."\n</form></td></tr></table>\n";
-					set_focus('Rep'.$report->id);
-					$Ajax->addUpdate(true, 'rep_form', $st_params);
-				}
-			}
-			$st_reports .= "</table>";
-		}
-
-		$st_params = "<div id='rep_form'>".
-			"$st_params</div>";
-		
-		$st = "<table align='center' width='80%' style='border:1px solid #cccccc;'><tr valign='top'>";
-		$st .= "<td width='30%'>$st_classes</td>";
-		$st .= "<td width='35%' style='border-left:1px solid #cccccc;border-right:1px solid #cccccc;padding-left:3px;'>$st_reports</td>";
-		$st .= "<td width='35%'>$st_params</td>";
-		$st .= "</tr></table><br>";
-
-		return $st;
+		require_once __DIR__.'/../../ui/reports.inc';
+		return ma_reports_render($this, $class);
 	}
 
 	function getOptions($controls, $id = 0)
 	{
+		require_once __DIR__.'/../../ui/workspace.inc';
+		require_once __DIR__.'/../../ui/date_picker.inc';
 		$st = '';
 		if ($controls == null)
 			return "";
 
 		$cnt = 0;
+		$types = array_values($controls);
 		foreach($controls as $title => $type)
 		{
 			$ctrl = '';
@@ -138,17 +78,25 @@ class BoxReports
 				if ($ctrl) break;
 			}
 			if ($ctrl == '') {
-				if (($id == 102 || $id == 202) && $cnt == 3) // set default Show Also Allocated to Yes in aged reports 2014-09-19 Joe Hunt
-					$_POST['PARAM_'.$cnt] = 1;
-				
-				if (isset($_COOKIE['select'][$id][$cnt])) // saved parameters 2010-10-06 Joe Hunt
-					$_POST['PARAM_'.$cnt] = $_COOKIE['select'][$id][$cnt];
+				// Saved defaults must not replace edits during a selector refresh.
+				if (!isset($_POST['PARAM_'.$cnt])) {
+					if (isset($_COOKIE['select'][$id][$cnt]) && is_scalar($_COOKIE['select'][$id][$cnt]))
+						$_POST['PARAM_'.$cnt] = $_COOKIE['select'][$id][$cnt];
+					elseif (($id == 102 || $id == 202) && $cnt == 3)
+						$_POST['PARAM_'.$cnt] = 1; // Show Also Allocated in aged reports.
+				}
 				$ctrl = $this->get_ctrl('PARAM_'.$cnt, $type);
 			}
 			if ($ctrl != '')  {
-				$st .= $title . ':<br>';
-				$st .= $ctrl;
-				$st .= "<br><br>";
+				$field = 'PARAM_'.$cnt;
+				if (is_string($type) && strpos($type, 'DATEBEGIN') === 0 && isset($types[$cnt+1]) && is_string($types[$cnt+1]) && strpos($types[$cnt+1], 'DATEEND') === 0)
+					$ctrl = preg_replace('/<input\b/', '<input data-ma-date-to="PARAM_'.($cnt+1).'"', $ctrl, 1);
+				// Some legacy selectors have a name but no id for their label.
+				$ctrl = preg_replace('/<(input|select|textarea)\b(?=[^>]*\bname=[\"\x27]'.$field.'(?:\[\])?[\"\x27])/i',
+					'<$1 aria-labelledby="label-'.$field.'"', $ctrl);
+				$st .= '<div class="ma-report-field" role="group" aria-labelledby="label-'.$field.'">';
+				$st .= '<label id="label-'.$field.'" for="'.$field.'">'.ma_ui_escape($title).'</label>';
+				$st .= '<div class="ma-report-control">'.$ctrl.'</div></div>';
 			} else {
 				display_error(_('Unknown report parameter type:').$type);
 			}
@@ -216,12 +164,12 @@ class BoxReports
 					}
 					else // saved parameters
 						$date = $_POST[$name];
-					$st = "<input type='text' name='$name' value='$date'>";
+					$st = "<input data-ma-date='true' type='text' id='$name' name='$name' value='".ma_ui_escape($date)."'>";
 					if (user_use_date_picker())
 					{
 						$calc_image = (file_exists("$path_to_root/themes/".user_theme()."/images/cal.gif")) ? 
 							"$path_to_root/themes/".user_theme()."/images/cal.gif" : "$path_to_root/themes/default/images/cal.gif";
-						$st .= "<a href=\"javascript:date_picker(document.forms[0].$name);\">"
+						$st .= "<a href=\"javascript:date_picker(document.getElementById('$name'));\">"
 						. "	<img src='$calc_image' style='vertical-align:middle;padding-bottom:4px;width:16px;height:16px;border:0;' alt='"._('Click Here to Pick up the date')."'></a>\n";
 					}	
 					return $st;
@@ -238,14 +186,14 @@ class BoxReports
 					$def = 0;
 					if (user_def_print_destination() == 1)
 						$def = 1;
-					return array_selector($name, $def, $sel);
+					return array_selector($name, get_post($name, $def), $sel);
 
 				case 'ORIENTATION':
 					$sel = array(_("Portrait"), _("Landscape"));
 					$def = 0;
 					if (user_def_print_orientation() == 1)
 						$def = 1;
-					return array_selector($name, $def, $sel);
+					return array_selector($name, get_post($name, $def), $sel);
 
 				case 'COMPARE':
 					$sel = array(_("Accumulated"), _("Period Y-1"), _("Budget"));
@@ -263,11 +211,11 @@ class BoxReports
 					return systypes_list($name, null, _("No Type Filter"));
 
 				case 'TEXT':
-					return "<input type='text' name='$name'>";
+					return "<input type='text' id='$name' name='$name' value='".ma_ui_escape(get_post($name, ''))."'>";
 
 				case 'TEXTBOX':
 					$value = (isset($_POST[$name]) ? $_POST[$name] : "");
-					return "<textarea rows=4 cols=30 maxlength=130 name='$name'>$value</textarea>";
+					return "<textarea rows=4 cols=30 maxlength=130 id='$name' name='$name'>".ma_ui_escape($value)."</textarea>";
 
 				case 'ACCOUNTS': // not used
 					return gl_account_types_list($name, null, _("No Account Group Filter"), true);
@@ -543,4 +491,3 @@ function add_custom_reports(&$reports)
 	if (file_exists($file))
 		include_once($file);
 }
-

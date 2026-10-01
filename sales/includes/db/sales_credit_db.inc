@@ -15,7 +15,7 @@
 //
 function write_credit_note(&$credit_note, $write_off_acc)
 {
-	global $Refs;
+	global $Refs, $path_to_root;
 
 	if (is_array($credit_note->src_docs))
 	{
@@ -171,6 +171,14 @@ function write_credit_note(&$credit_note, $write_off_acc)
 	}
 	hook_db_postwrite($credit_note, ST_CUSTCREDIT);
 	commit_transaction();
+
+	// eTIMS: attempt to stamp this credit note with KRA right away, same
+	// as the matching hook in write_sales_invoice().
+	include_once($path_to_root.'/etims/includes/db/etims_config_db.inc');
+	if (etims_stamping_active()) {
+		include_once($path_to_root.'/etims/includes/db/etims_submit_db.inc');
+		etims_stamp_now_or_queue(ST_CUSTCREDIT, $credit_no);
+	}
 
 	return $credit_no;
 }

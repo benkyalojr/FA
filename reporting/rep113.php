@@ -202,6 +202,10 @@ function print_credits()
 			$rep->TextCol(1, 7, $myrow['curr_code'] . ": " . $words, - 2);
 		}	
 		$rep->Font();
+
+		include_once($path_to_root . '/etims/includes/etims_qr.inc');
+		print_etims_qr($rep, ST_CUSTCREDIT, $i);
+
 		if ($email == 1)
 		{
 			$myrow['dimension_id'] = $paylink; // helper for pmt link

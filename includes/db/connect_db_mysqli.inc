@@ -10,6 +10,7 @@
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 define('DB_DUPLICATE_ERROR', 1062);
+require_once __DIR__.'/system_audit.inc';
 define('SQL_MODE', 'STRICT_ALL_TABLES'); // prevents SQL injection with silent field content truncation
 
 $db_last_inserted_id = 0;
@@ -54,6 +55,10 @@ function db_query($sql, $err_msg=null)
 	$comp = isset($_SESSION["wa_current_user"]->cur_con) ? $_SESSION["wa_current_user"]->cur_con : 0;
 	$cur_prefix = (string)@$db_connections[$comp]['tbpref'];
 	$sql = str_replace(TB_PREF, $cur_prefix, $sql);
+	system_audit_context($db, $cur_prefix);
+	if (preg_match('/^\s*(CREATE|ALTER|DROP|TRUNCATE|RENAME)\s+(?:OR\s+REPLACE\s+)?(?:TABLE|TRIGGER|VIEW|DATABASE)\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?([`a-zA-Z0-9_.]+)/i', $sql, $ddl)
+		&& system_audit_available($db, $cur_prefix, true))
+		system_audit_event('schema_attempt', array('operation'=>strtoupper($ddl[1]), 'object'=>$ddl[2]));
 
 	if ($SysPrefs->show_sql)
 	{
@@ -65,7 +70,8 @@ function db_query($sql, $err_msg=null)
 
 	$retry = MAX_DEADLOCK_RETRY;
 	do {
-		$result = mysqli_query($db, $sql);
+		try { $result = mysqli_query($db, $sql); }
+		catch (Throwable $error) { $GLOBALS['system_audit_outcome']='database_error'; throw $error; }
 		if (mysqli_errno($db) == 1213)	{ // deadlock detected
 			sleep(1); $retry--;
 		} else
@@ -90,6 +96,7 @@ function db_query($sql, $err_msg=null)
 			$err_msg = '<br>At file '.xdebug_call_file().':'.xdebug_call_line().':<br>'.$err_msg;
 		check_db_error($err_msg, $sql, $exit);
 	}
+	if ($result) system_audit_refresh_schema($db, $cur_prefix, $sql);
 	return $result;
 }
 

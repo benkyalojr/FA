@@ -51,9 +51,9 @@ if (!isset($_POST['bank_account'])) { // first page call
 		$type = !isset($_GET['Type']) ? ST_SALESINVOICE : $_GET['Type'];
 		$cust = !isset($_GET['customer_id']) ? null : $_GET['customer_id'];
 		$inv = get_customer_trans($_GET['SInvoice'], $type,  $cust);
-		$dflt_act = get_default_bank_account($inv['curr_code']);
-		$_POST['bank_account'] = $dflt_act['id'];
 		if ($inv) {
+			$dflt_act = get_default_bank_account($inv['curr_code']);
+			$_POST['bank_account'] = $dflt_act['id'] ?? null;
 			$_POST['customer_id'] = $inv['debtor_no'];
 			$_SESSION['alloc']->set_person($inv['debtor_no'], PT_CUSTOMER);
 			$_SESSION['alloc']->read();
@@ -88,7 +88,8 @@ if (!isset($_POST['customer_id'])) {
 	$_SESSION['alloc']->set_person($_POST['customer_id'], PT_CUSTOMER);
 	$_SESSION['alloc']->read();
 	$dflt_act = get_default_bank_account($_SESSION['alloc']->person_curr);
-	$_POST['bank_account'] = $dflt_act['id'];
+	// No matching currency account: let the bank selector choose an available account.
+	$_POST['bank_account'] = $dflt_act['id'] ?? null;
 }
 if (!isset($_POST['DateBanked'])) {
 	$_POST['DateBanked'] = new_doc_date();
@@ -248,6 +249,13 @@ if (get_post('AddPaymentItem') && can_process()) {
 	$_SESSION['alloc']->trans_no = $payment_no;
 	$_SESSION['alloc']->date_ = $_POST['DateBanked'];
 	$_SESSION['alloc']->write();
+	if ($new_pmt && get_company_pref('use_communications')) {
+		include_once($path_to_root . "/communications/includes/db/comm_send_db.inc");
+		include_once($path_to_root . "/communications/includes/db/comm_workflow_db.inc");
+		comm_workflow_customer('customer_payment', $_POST['customer_id'], $_POST['BranchID'], array(
+			'payment_no'=>$payment_no, 'amount'=>number_format((float)input_num('amount'), 2), 'date'=>$_POST['DateBanked'],
+		), array('trans_type'=>ST_CUSTPAYMENT,'trans_no'=>$payment_no));
+	}
 
 	unset($_SESSION['alloc']);
 	meta_forward($_SERVER['PHP_SELF'], $new_pmt ? "AddedID=$payment_no" : "UpdatedID=$payment_no");
@@ -332,7 +340,7 @@ if (list_updated('customer_id') || ($new && list_updated('bank_account'))) {
 	$_POST['memo_'] = $_POST['amount'] = $_POST['discount'] = '';
 	if (list_updated('customer_id')) {
 		$dflt_act = get_default_bank_account($_SESSION['alloc']->person_curr);
-		$_POST['bank_account'] = $dflt_act['id'];
+		$_POST['bank_account'] = $dflt_act['id'] ?? null;
 	}
 	$Ajax->activate('_page_body');
 }

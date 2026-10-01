@@ -208,7 +208,7 @@ function get_customer_currency($customer_id=null, $branch_id=null)
 	return $myrow ? $myrow[0] : get_company_currency();
 }
 
-function get_customers_search($customer)
+function get_customers_search($customer, $active_only=false)
 {
 	global $SysPrefs;
 
@@ -221,7 +221,9 @@ function get_customers_search($customer)
 	  WHERE (  name LIKE " . db_escape("%" . $customer. "%") . " OR 
     		 debtor_ref LIKE " . db_escape("%" . $customer. "%") . " OR 
 	        address LIKE " . db_escape("%" . $customer. "%") . " OR 
-    	     tax_id LIKE " . db_escape("%" . $customer. "%").")
+	     tax_id LIKE " . db_escape("%" . $customer. "%").")";
+	if ($active_only) $sql .= " AND inactive=0";
+	$sql .= "
 	  ORDER BY name LIMIT 0,".(int)($limit);
 
 	return db_query($sql, "Failed in retreiving customer list.");

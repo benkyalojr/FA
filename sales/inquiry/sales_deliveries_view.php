@@ -97,30 +97,18 @@ if (get_post('_DeliveryNumber_changed'))
 
 start_form(false, false, $_SERVER['PHP_SELF'] ."?OutstandingOnly=".$_POST['OutstandingOnly']);
 
-start_table(TABLESTYLE_NOBORDER);
-start_row();
-ref_cells(_("#:"), 'DeliveryNumber', '',null, '', true);
-date_cells(_("from:"), 'DeliveryAfterDate', '', null, -user_transaction_days());
-date_cells(_("to:"), 'DeliveryToDate', '', null, 1);
-
-locations_list_cells(_("Location:"), 'StockLocation', null, true);
-end_row();
-
-end_table();
-start_table(TABLESTYLE_NOBORDER);
-start_row();
-
-stock_items_list_cells(_("Item:"), 'SelectStockFromList', null, true);
-
-customer_list_cells(_("Select a customer: "), 'customer_id', null, true, true);
-
-submit_cells('SearchOrders', _("Search"),'',_('Select documents'), 'default');
-
+ma_sales_filter_start();
+ma_sales_field(_('#'), function() { ref_cells(null, 'DeliveryNumber', '', null, '', true); });
+ma_sales_field(_('Date'), function() {
+	date_cells(null, 'DeliveryAfterDate', '', null, -user_transaction_days());
+	date_cells(null, 'DeliveryToDate', '', null, 1);
+});
+ma_sales_field(_('Location'), function() { locations_list_cells(null, 'StockLocation', null, true); });
+ma_sales_field(_('Item'), function() { stock_items_list_cells(null, 'SelectStockFromList', null, true); });
+ma_sales_field(_('Customer'), function() { customer_list_cells(null, 'customer_id', null, true, true); });
 hidden('OutstandingOnly', $_POST['OutstandingOnly']);
-
-end_row();
-
-end_table(1);
+ma_sales_filter_end('SearchOrders', _('Select documents'));
+echo '<br>';
 //---------------------------------------------------------------------------------------------
 
 function trans_view($trans, $trans_no)

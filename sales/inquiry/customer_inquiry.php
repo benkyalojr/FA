@@ -23,6 +23,9 @@ if ($SysPrefs->use_popup_windows)
 	$js .= get_js_open_window(900, 500);
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
+// Tab links preselect a transaction type, e.g. ?filterType=1 for invoices.
+if (!isset($_POST['filterType']) && isset($_GET['filterType']) && is_scalar($_GET['filterType']))
+	$_POST['filterType'] = $_GET['filterType'];
 page(_($help_context = "Customer Transactions"), isset($_GET['customer_id']), false, "", $js);
 
 //------------------------------------------------------------------------------------------------
@@ -49,6 +52,28 @@ function trans_view($trans)
 function due_date($row)
 {
 	return	$row["type"] == ST_SALESINVOICE	? $row["due_date"] : '';
+}
+
+// eTIMS/VAT column - only sales invoices and credit notes are ever
+// stamped, matching etims_stamp_now_or_queue()'s own scope. Shows the
+// KRA QR verification link once stamped, or a Restamp action otherwise
+// - one small per-row lookup, same style gl_view()/trans_view() above
+// already use for this exact list.
+function etims_status($row)
+{
+	if ($row['type'] != ST_SALESINVOICE && $row['type'] != ST_CUSTCREDIT)
+		return '';
+
+	$sub = db_fetch(db_query("SELECT status, short_url FROM " . TB_PREF . "etims_submissions
+		WHERE trans_type=" . db_escape($row['type']) . " AND trans_no=" . db_escape($row['trans_no']),
+		'Cannot get eTIMS submission'));
+
+	if ($sub && $sub['status'] === 'stamped' && $sub['short_url'])
+		return "<a href='" . html_specials_encode($sub['short_url']) . "' target='_blank'>" . _('VAT') . "</a>";
+
+	$restamp_url = $_SERVER['PHP_SELF'] . "?etims_restamp=" . $row['type'] . "-" . $row['trans_no']
+		. "&customer_id=" . urlencode(get_post('customer_id'));
+	return "<a href='" . $restamp_url . "'>" . _('Restamp') . "</a>";
 }
 
 function gl_view($row)
@@ -162,31 +187,37 @@ if (isset($_GET['customer_id']))
 
 //------------------------------------------------------------------------------------------------
 
+if (isset($_GET['etims_restamp'])) {
+	list($etims_type, $etims_trans_no) = explode('-', $_GET['etims_restamp'], 2);
+	include_once($path_to_root . "/etims/includes/etims_setup.inc");
+	if (etims_schema_ready()) {
+		include_once($path_to_root . "/etims/includes/db/etims_submit_db.inc");
+		etims_stamp_now_or_queue((int)$etims_type, (int)$etims_trans_no);
+		display_notification(_('Restamp attempted - refresh in a moment to see the result.'));
+	} else {
+		display_error(etims_setup_message());
+	}
+}
+
 start_form();
 
 if (!isset($_POST['customer_id']))
 	$_POST['customer_id'] = get_global_customer();
 
-start_table(TABLESTYLE_NOBORDER);
-start_row();
-
-ref_cells(_("Reference:"), 'Ref', '', NULL, _('Enter reference fragment or leave empty'));
-
+ma_sales_filter_start();
+ma_sales_field(_('Reference'), function() { ref_cells(null, 'Ref', '', NULL, _('Enter reference fragment or leave empty')); });
 if (!$page_nested)
-	customer_list_cells(_("Select a customer: "), 'customer_id', null, true, true, false, true);
-
-cust_allocations_list_cells(null, 'filterType', null, true, true);
-
+	ma_sales_field(_('Customer'), function() { customer_list_cells(null, 'customer_id', null, true, true, false, true); });
+ma_sales_field(_('Type'), function() { cust_allocations_list_cells(null, 'filterType', null, true, true); });
 if ($_POST['filterType'] != '2')
 {
-	date_cells(_("From:"), 'TransAfterDate', '', null, -user_transaction_days());
-	date_cells(_("To:"), 'TransToDate', '', null);
+	ma_sales_field(_('Date'), function() {
+		date_cells(null, 'TransAfterDate', '', null, -user_transaction_days());
+		date_cells(null, 'TransToDate', '', null);
+	});
 }
-check_cells(_("Zero values"), 'show_voided');
-
-submit_cells('RefreshInquiry', _("Search"),'',_('Refresh Inquiry'), 'default');
-end_row();
-end_table();
+ma_sales_field('', function() { check_cells(_("Zero values"), 'show_voided'); }, 'ma-sales-check');
+ma_sales_filter_end('RefreshInquiry', _('Refresh Inquiry'));
 
 set_global_customer($_POST['customer_id']);
 
@@ -224,6 +255,7 @@ $cols = array(
 	_("Currency") => array('align'=>'center'),
 	_("Amount") => array('align'=>'right', 'fun'=>'fmt_amount'), 
 	_("Balance") => array('align'=>'right', 'type'=>'amount'),
+	_("VAT") => array('fun'=>'etims_status', 'align'=>'center'),
 		array('insert'=>true, 'fun'=>'gl_view'),
 		array('insert'=>true, 'fun'=>'edit_link'),
 		array('insert'=>true, 'fun'=>'copy_link'),
@@ -238,6 +270,8 @@ if ($_POST['customer_id'] != ALL_TEXT) {
 }
 if ($_POST['filterType'] != '2')
 	$cols[_("Balance")] = 'skip';
+if (!get_company_pref('use_etims_stamping'))
+	$cols[_("VAT")] = 'skip';
 
 $table =& new_db_pager('trans_tbl', $sql, $cols);
 $table->set_marker('check_overdue', _("Marked items are overdue."));

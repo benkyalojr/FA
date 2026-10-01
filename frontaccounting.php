@@ -13,12 +13,14 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 	die("Restricted access");
 	include_once($path_to_root . '/applications/application.php');
 	include_once($path_to_root . '/applications/customers.php');
+	include_once($path_to_root . '/applications/customer_directory.php');
 	include_once($path_to_root . '/applications/suppliers.php');
 	include_once($path_to_root . '/applications/inventory.php');
 	include_once($path_to_root . '/applications/fixed_assets.php');
 	include_once($path_to_root . '/applications/manufacturing.php');
 	include_once($path_to_root . '/applications/dimensions.php');
 	include_once($path_to_root . '/applications/generalledger.php');
+	include_once($path_to_root . '/applications/communications.php');
 	include_once($path_to_root . '/applications/setup.php');
 	include_once($path_to_root . '/installed_extensions.php');
 
@@ -55,15 +57,17 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 		{
 			global $path_to_root;
 			
-			include_once($path_to_root . "/themes/".user_theme()."/renderer.php");
+			include_once($path_to_root . '/ui/renderer.php');
 
 			$this->init();
-			$rend = new renderer();
-			$rend->wa_header();
+			$rend = new ma_renderer();
+			$selected = is_string($_GET['application'] ?? null) ? $_GET['application'] : '';
+			$title = isset($this->applications[$selected]) ? ma_ui_label($this->applications[$selected]->name) : _('Dashboard');
+			page($title, false, true);
 
 			$rend->display_applications($this);
 
-			$rend->wa_footer();
+			end_page(false, true);
 			$this->renderer =& $rend;
 		}
 		function init()
@@ -75,12 +79,15 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 			$this->menu->add_item(_("Logout"), "/account/access/logout.php");
 			$this->applications = array();
 			$this->add_application(new customers_app());
+			$this->add_application(new customer_directory_app());
 			$this->add_application(new suppliers_app());
 			$this->add_application(new inventory_app());
 			if (get_company_pref('use_manufacturing'))
 				$this->add_application(new manufacturing_app());
 			if (get_company_pref('use_fixed_assets'))
 			    $this->add_application(new assets_app());
+			if (get_company_pref('use_communications'))
+				$this->add_application(new communications_app());
 			$this->add_application(new dimensions_app());
 			$this->add_application(new general_ledger_app());
 

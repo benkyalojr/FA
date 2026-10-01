@@ -1,0 +1,43 @@
+/**********************************************************************
+  Sizing overrides so Select2 boxes match FrontAccounting's compact
+  form controls (themes/default/default.css sets input,select to
+  font-size:11px / padding:1px and select to max-width:230px). Select2's
+  own defaults assume a taller, more spaced-out control, which is why
+  the box looked oversized and the dropdown arrow sat off-center.
+***********************************************************************/
+.select2-container--default .select2-selection--single {
+	position: relative;
+	height: 20px;
+	border: 1px solid #7f9db9;
+	border-radius: 0;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+	line-height: 18px;
+	font-size: 11px;
+	padding-left: 4px;
+	padding-right: 20px;
+	text-align: left;
+}
+
+.select2-container--default .select2-results__option {
+	text-align: left;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+	/* Keep the arrow inside the border, clear of the theme's span padding. */
+	height: 100%;
+	width: 20px;
+	padding: 0;
+	top: 0;
+	right: 0;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+	margin: 0;
+	transform: translate(-50%, -50%);
+}
+
+.select2-container {
+	vertical-align: middle;
+}

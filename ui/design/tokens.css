@@ -1,0 +1,86 @@
+/* Shared design settings. Components use these tokens instead of local colors. */
+:root {
+  color-scheme: light;
+  --color-primary: #008c4f;
+  --color-primary-hover: #006f3f;
+  --color-on-primary: #ffffff;
+  --color-background: #f5f8f6;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f4f8f6;
+  --color-text: #14201a;
+  --color-text-muted: #66756d;
+  --color-label: #3b4841;
+  --color-placeholder: #76837b;
+  --color-border: #cdd6d1;
+  --color-divider: #e2e9e5;
+  --color-focus: #008c4f4d;
+  --color-danger: #873036;
+  --color-danger-surface: #fbf1f1;
+  --color-danger-border: #e8c5c7;
+  --color-info: #0b6a9c;
+  --color-info-surface: #eef8fd;
+  --color-info-border: #c4e6f7;
+  --color-story-start: #08261a;
+  --color-story-end: #0b5a38;
+  --color-story-glow: #0b8a4f80;
+  --color-story-text: #f8fcfa;
+  --color-story-muted: #b3cfc2;
+  --color-story-detail: #cfe3d9;
+  --color-story-accent: #ffb27a;
+  --color-story-border: #2f7d5a;
+  --color-story-surface: #12754a70;
+  --color-accent: #fe6702;
+  --color-accent-secondary: #00a4ee;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-size-body: 0.875rem;
+  --font-size-label: 0.8125rem;
+  --font-size-small: 0.75rem;
+  --radius-control: 0.5rem;
+  --radius-panel: 0.75rem;
+  --radius-pill: 999px;
+  --control-height: 3rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --motion-fast: 150ms;
+  --color-success: #008c4f;
+  --color-success-tint: #e8f7ef;
+  --color-warning: #c24f00;
+  --color-warning-tint: #fff1e6;
+  --color-purple: #0b78ad;
+  --color-purple-tint: #e8f6fd;
+  --color-pink: #873036;
+  --color-pink-tint: #f9eeee;
+  --color-primary-tint: #e6f5ed;
+  --color-nav-text: #47564d;
+  --color-nav-icon: #76877d;
+  --color-hero-start: #064d2d;
+  --color-hero-middle: #008c4f;
+  --color-hero-end: #2fb274;
+  --color-hero-text: #ffffff;
+  --color-hero-muted: #d9f2e5;
+  --color-hero-overlay: #ffffff20;
+  --color-hero-border: #ffffff40;
+  --shadow-panel: 0 2px 4px #1a2e2408;
+  --shadow-dropdown: 0 12px 36px #1a2e2424;
+  --color-scrim: #08261a80;
+  --sidebar-width: 218px;
+  --topbar-height: 64px;
+}
+
+/* Workspace appearance; authentication keeps its light palette. */
+html[data-ma-theme="dark"] body.ma-workspace-page {
+  color-scheme: dark; --color-background: #13201a; --color-surface: #1b2c24; --color-surface-hover: #243a30;
+  --color-text: #eef7f2; --color-text-muted: #a9bdb2; --color-label: #cadbd1; --color-divider: #2f443a; --color-border: #456055;
+  --color-primary: #3dd08a; --color-primary-hover: #6fe0a8; --color-primary-tint: #1f4a37; --color-nav-text: #bdd0c5; --color-nav-icon: #94ab9e;
+  --color-success: #3dd08a; --color-success-tint: #173f2e; --color-warning: #ff9a55; --color-warning-tint: #4a3022;
+  --color-purple: #5cc8f5; --color-purple-tint: #173a4a; --color-pink: #e58a90; --color-pink-tint: #43262a;
+  --color-danger: #f0a3a8; --color-danger-surface: #3f2427; --color-info: #9fdcf7; --color-info-surface: #17384a;
+  --color-on-primary: #0b2418; --color-hero-start: #0a3a24; --color-hero-middle: #0d6b42; --color-hero-end: #169660;
+}

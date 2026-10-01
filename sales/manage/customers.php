@@ -33,6 +33,8 @@ if (isset($_GET['debtor_no']))
 	$_POST['customer_id'] = $_GET['debtor_no'];
 }
 
+if (isset($_GET['_tabs_sel']) && is_string($_GET['_tabs_sel']) && !isset($_POST['_tabs_sel']))
+	$_POST['_tabs_sel'] = $_GET['_tabs_sel'];
 $selected_id = get_post('customer_id','');
 //--------------------------------------------------------------------------------------------
 

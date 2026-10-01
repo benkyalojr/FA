@@ -16,8 +16,8 @@ function page_footer($no_menu=false, $is_index=false)
 	$page_header_args = func_get_args();
 	hook_invoke_all('pre_footer', $page_header_args);
 
-	include_once($path_to_root."/themes/".user_theme()."/renderer.php");
-	$rend = new renderer();
+	include_once($path_to_root.'/ui/renderer.php');
+	$rend = new ma_renderer();
 	$rend->menu_footer($no_menu, $is_index);
 
 	$edits = "editors = ".$Ajax->php2js($Editors).";";
@@ -37,10 +37,11 @@ function page_footer($no_menu=false, $is_index=false)
 	echo "\n--></script>\n";
 
 	if ($sql_queries) {
+		if (!in_ajax()) echo '<details class="ma-diagnostics"><summary>'. _('Developer diagnostics') .'</summary>';
 		div_start('footer_debug');
 		 echo "<div class='note_msg'>$sql_queries</div>";
 		div_end();
+		if (!in_ajax()) echo '</details>';
 	}
     echo "</body></html>\n";
 }
-

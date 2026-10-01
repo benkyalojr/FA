@@ -141,18 +141,29 @@ class current_user
 				flush_dir(user_js_cache()); // refresh cache on login
 			}
 		}
+		if (function_exists('system_audit_event'))
+			system_audit_event($this->logged ? 'login_success' : 'login_failed');
 		return $this->logged;
 	}
 
-	function reset_password($company, $email) {
-		global $SysPrefs;
+	// $identifier may be the account's email address, username or phone number.
+	function reset_password($company, $identifier) {
+		global $SysPrefs, $path_to_root;
 
 		$this->set_company($company);
 		$this->logged = false;
 
 		set_global_connection();
 
-		$user = get_user_by_email($email);
+		$identifier = trim((string)$identifier);
+		$digits = preg_replace('/\D+/', '', $identifier);
+		$where = "email=".db_escape($identifier)." OR user_id=".db_escape($identifier);
+		if ($digits !== '') {
+			$tail = substr($digits, -9);
+			$where .= " OR RIGHT(REPLACE(REPLACE(REPLACE(phone,'+',''),' ',''),'-',''),9)=".db_escape($tail);
+		}
+		$matches = db_query("SELECT * FROM ".TB_PREF."users WHERE (".$where.") AND inactive=0");
+		$user = db_num_rows($matches) === 1 ? db_fetch($matches) : false;
 
 		if ($user != false) {
 
@@ -160,19 +171,34 @@ class current_user
 			$hash = md5($password);
 
 			update_user_password($user['id'], $user['user_id'], $hash);
-			
-			$sender = get_company_pref('email');
-			if (empty($sender))
-				$header = "";
-			else
-				$header = "From: $sender";
 
-			mail($email, _("New password for")." ".$SysPrefs->app_title, $password, $header);
+			$delivered = false;
+			if (get_company_pref('use_communications')) {
+				include_once($path_to_root . "/communications/includes/db/comm_send_db.inc");
+				$results = comm_send_notification('user_password_reset', array(
+					'type' => 'user', 'id' => (int)$user['id'], 'name' => $user['real_name'],
+					'phone' => isset($user['phone']) ? $user['phone'] : null,
+					'email' => $user['email'],
+				), array(
+					'name' => $user['real_name'], 'username' => $user['user_id'],
+					'temporary_password' => $password,
+				));
+				$delivered = in_array('queued', $results, true);
+			}
+			// Communications is off, or no channel could take the message:
+			// fall back to plain email so the user is never locked out.
+			if (!$delivered && !empty($user['email'])) {
+				$sender = get_company_pref('email');
+				$header = empty($sender) ? "" : "From: $sender";
+				mail($user['email'], _("New password for")." ".$SysPrefs->app_title, $password, $header);
+			}
 
+			if (function_exists('system_audit_event'))
+				system_audit_event('password_reset', array('user_id' => (int)$user['id']));
 			return true;
 		}
-   		return false;
-    }
+		return false;
+	}
 
 	function check_user_access()
 	{

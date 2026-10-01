@@ -598,6 +598,7 @@ $tabs = (get_post('fixed_asset'))
 		'movement' => array(_('&Transactions'), (user_check_access('SA_ITEMSTRANSVIEW') && is_inventory_item($stock_id) ? 
 			$stock_id : null)),
 		'status' => array(_('&Status'), (user_check_access('SA_ITEMSSTATVIEW') ? $stock_id : null)),
+		'etims_item' => array(_('eTIMS Item Registration'), (user_check_access('SA_ETIMSITEMS') ? $stock_id : null)),
 		'attachments' => array(_('Attachments'), (user_check_access('SA_ATTACHDOCUMENT') ? get_item_code_id($stock_id) : null)),
 	);
 
@@ -639,6 +640,11 @@ tabbed_content_start('tabs', $tabs);
 		case 'status':
 			$_GET['stock_id'] = $stock_id;
 			include_once($path_to_root."/inventory/inquiry/stock_status.php");
+			break;
+		case 'etims_item':
+			$_GET['stock_id'] = $stock_id;
+			$_GET['page_level'] = 1;
+			include_once($path_to_root."/inventory/etims_item.php");
 			break;
 		case 'attachments':
 			$id = get_item_code_id($stock_id);

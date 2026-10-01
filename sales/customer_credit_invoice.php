@@ -53,6 +53,17 @@ if (isset($_GET['AddedID'])) {
 
 	display_note(get_customer_trans_view_str($trans_type, $credit_no, _("&View This Credit Note")), 0, 0);
 
+	if (get_company_pref('use_etims_stamping')) {
+		$etims_sub = db_fetch(db_query("SELECT status, short_url FROM " . TB_PREF . "etims_submissions
+			WHERE trans_type=" . db_escape($trans_type) . " AND trans_no=" . db_escape($credit_no),
+			'Cannot get eTIMS submission'));
+		if ($etims_sub && $etims_sub['status'] === 'stamped')
+			display_notification(_("Stamped with KRA eTIMS.") . ($etims_sub['short_url']
+				? " <a href='" . html_specials_encode($etims_sub['short_url']) . "' target='_blank'>" . _("View QR") . "</a>" : ''));
+		else
+			display_notification(_("Not yet stamped with KRA eTIMS - queued for retry (see Setup > eTIMS Submissions)."));
+	}
+
 	display_note(print_document_link($credit_no."-".$trans_type, _("&Print This Credit Note"), true, $trans_type),1);
 	display_note(print_document_link($credit_no."-".$trans_type, _("&Email This Credit Note"), true, $trans_type, false, "printlink", "", 1),1);
 

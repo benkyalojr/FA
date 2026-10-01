@@ -336,6 +336,9 @@ function print_invoices()
 				$rep->TextCol(1, 7, $myrow['curr_code'] . ": " . $words, - 2);
 			}
 			$rep->Font();
+			include_once($path_to_root . '/etims/includes/etims_qr.inc');
+			print_etims_qr($rep, ST_SALESINVOICE, $row['trans_no']);
+
 			if ($email == 1)
 			{
 				$rep->End($email, sprintf(_("Invoice %s from %s"), $myrow['reference'], htmlspecialchars_decode(get_company_pref('coy_name'))));

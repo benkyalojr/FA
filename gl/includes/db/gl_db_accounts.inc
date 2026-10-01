@@ -290,7 +290,7 @@ function is_bank_account($account_code)
 		return false;
 }
 
-function get_chart_accounts_search($like, $skip=false)
+function get_chart_accounts_search($like, $skip=false, $active_only=false, $type_id=null)
 {
 	global $SysPrefs;
 
@@ -309,6 +309,8 @@ function get_chart_accounts_search($like, $skip=false)
 	else		
 		$sql = "SELECT chart.account_code, chart.account_name, type.name, chart.inactive, type.id
 			FROM ".TB_PREF."chart_master chart,".TB_PREF."chart_types type WHERE chart.account_type=type.id ";
+	if ($active_only) $sql .= "AND chart.inactive=0 ";
+	if ($type_id !== null) $sql .= "AND chart.account_type=".(int)$type_id." ";
 	$sql .= "AND (
           	chart.account_name LIKE " . db_escape("%" . $like. "%") . " OR
           	chart.account_code LIKE " . db_escape("%" . $like. "%") . "

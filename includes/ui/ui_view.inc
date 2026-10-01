@@ -998,6 +998,12 @@ function get_js_date_picker()
 {
     global $SysPrefs, $tmonths;
 
+    if (!in_array((int)$SysPrefs->date_system, array(1, 2), true)) {
+        require_once __DIR__.'/../../ui/date_picker.inc';
+        ma_date_picker_assets();
+        return '';
+    }
+
     $fpath = user_js_cache().'/'.'date_picker.js';
 
     if (!file_exists($fpath) || $SysPrefs->go_debug) {
