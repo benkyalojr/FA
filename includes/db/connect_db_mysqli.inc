@@ -41,6 +41,8 @@ function set_global_connection($company=-1)
 	///// We are, however, investigating the existing code to be compatible in the future.
 	db_query("SET sql_mode = '".SQL_MODE."'");
 	/////
+	// Make NOW() and stored timestamps follow the application's time zone (config.php).
+	db_query("SET time_zone = '".date('P')."'");
 	$SysPrefs->refresh();
 	return $db;
 }

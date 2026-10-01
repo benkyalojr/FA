@@ -2659,9 +2659,9 @@ function coa_list_row($label, $name, $value=null)
 			if ($ext!=null) {
 				$descr = $ext['name'];
 			} elseif ($fname == 'en_US-new.sql') { // two standard COAs
-				$descr = _("Standard new company American COA (4 digit)");
+				$descr = _("New company, no data: 4 digit chart, KES, Kenyan VAT (recommended)");
 			} elseif ($fname == 'en_US-demo.sql') {
-				$descr = _("Standard American COA (4 digit) with demo data");
+				$descr = _("Demo company with sample data (testing only)");
 			} else
 				$descr = $fname;
 

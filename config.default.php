@@ -21,9 +21,10 @@
 if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_to_root']))
 	die("Restricted access");
 
-	// Server time zone. Since php 5.3.0 time zone have to be set either here or in server php ini file
-	if (!ini_get('date.timezone'))
-		ini_set('date.timezone', 'Europe/Berlin');
+	// Server time zone (Kenya: East Africa Time, UTC+3, no daylight saving). Set here so it
+	// does not depend on the server's php.ini; the database connection follows it.
+	date_default_timezone_set('Africa/Nairobi');
+	ini_set('date.timezone', 'Africa/Nairobi');
 
 	// Log file for error/warning messages. Should be set to any location
 	// writable by www server. When set to empty string logging is switched off. 

@@ -96,8 +96,8 @@ CREATE TABLE `0_bank_accounts` (
 -- Data of table `0_bank_accounts` --
 
 INSERT INTO `0_bank_accounts` VALUES
-('1060', '0', 'Current account', 'N/A', 'N/A', NULL, 'USD', '1', '1', '5690', '0000-00-00 00:00:00', '0', '0'),
-('1065', '3', 'Petty Cash account', 'N/A', 'N/A', NULL, 'USD', '0', '2', '5690', '0000-00-00 00:00:00', '0', '0');
+('1060', '0', 'Current account', 'N/A', 'N/A', NULL, 'KES', '1', '1', '5690', '0000-00-00 00:00:00', '0', '0'),
+('1065', '3', 'Petty Cash account', 'N/A', 'N/A', NULL, 'KES', '0', '2', '5690', '0000-00-00 00:00:00', '0', '0');
 
 -- Structure of table `0_bank_trans` --
 
@@ -439,6 +439,7 @@ CREATE TABLE `0_currencies` (
 INSERT INTO `0_currencies` VALUES
 ('CA Dollars', 'CAD', '$', 'Canada', 'Cents', '1', '0'),
 ('Euro', 'EUR', '€', 'Europe', 'Cents', '1', '0'),
+('Kenyan Shillings', 'KES', 'KSh', 'Kenya', 'Cents', '1', '0'),
 ('Pounds', 'GBP', '£', 'England', 'Pence', '1', '0'),
 ('US Dollars', 'USD', '$', 'United States', 'Cents', '1', '0');
 
@@ -1339,11 +1340,7 @@ CREATE TABLE `0_stock_category` (
 
 -- Data of table `0_stock_category` --
 
-INSERT INTO `0_stock_category` VALUES
-('1', 'Components', '1', 'each', 'B', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0'),
-('2', 'Charges', '1', 'each', 'D', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0'),
-('3', 'Systems', '1', 'each', 'M', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0'),
-('4', 'Services', '1', 'hr', 'D', '4010', '5010', '1510', '5040', '1530', '0', '0', '0', '0', '0');
+-- (no sample item categories: create your own under Inventory > Settings)
 
 -- Structure of table `0_stock_fa_class` --
 
@@ -1553,7 +1550,7 @@ INSERT INTO `0_sys_prefs` VALUES
 ('email', 'setup.company', 'varchar', 100, ''),
 ('coy_logo', 'setup.company', 'varchar', 100, ''),
 ('domicile', 'setup.company', 'varchar', 55, ''),
-('curr_default', 'setup.company', 'char', 3, 'USD'),
+('curr_default', 'setup.company', 'char', 3, 'KES'),
 ('use_dimension', 'setup.company', 'tinyint', 1, '1'),
 ('f_year', 'setup.company', 'int', 11, '1'),
 ('shortname_name_in_list','setup.company', 'tinyint', 1, '0'),
@@ -1909,8 +1906,7 @@ CREATE TABLE `0_workcentres` (
 
 -- Data of table `0_workcentres` --
 
-INSERT INTO `0_workcentres` VALUES
-('1', 'Work Centre', '', '0');
+-- (no sample work centre)
 
 -- Structure of table `0_workorders` --
 
