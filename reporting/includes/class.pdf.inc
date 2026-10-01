@@ -185,7 +185,24 @@ class Cpdf extends FPDI {
             }
             // else use built-in adobe fonts helvetica.
 		}
+		// The Unicode fonts (dejavu, freesans, ...) need font definition files that are not
+		// part of every installation. A missing one used to stop the whole report with
+		// "Could not include font definition file"; print with the built-in Helvetica instead.
+		if ($fontname !== '' && !$this->fontDefinitionExists($fontname, $style))
+			$fontname = 'helvetica';
 		$this->SetFont($fontname, $style);
+	}
+
+	// True when TCPDF can load this font: a built-in PDF font, or a definition file in the fonts folder.
+	function fontDefinitionExists($fontname, $style = '')
+	{
+		$family = strtolower(str_replace(' ', '', $fontname));
+		if (in_array($family, array('helvetica', 'arial', 'times', 'courier', 'symbol', 'zapfdingbats'), true))
+			return true;
+		$style = strtolower(str_replace(array('u', 'd', 'U', 'D'), '', (string)$style));
+		if ($style === 'ib') $style = 'bi';
+		$path = $this->_getfontpath();
+		return file_exists($path.$family.$style.'.php') || file_exists($path.$family.'.php');
 	}
 
 	function Header1()
