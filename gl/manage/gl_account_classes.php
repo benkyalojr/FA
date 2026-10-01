@@ -106,7 +106,8 @@ if ($Mode == 'RESET')
 $result = get_account_classes(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE);
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_("Class ID"), _("Class Name"), _("Class Type"), "", "");
 if (isset($SysPrefs->use_oldstyle_convert) && $SysPrefs->use_oldstyle_convert == 1)
 	$th[2] = _("Balance Sheet");
@@ -136,6 +137,8 @@ inactive_control_row($th);
 end_table(1);
 //-----------------------------------------------------------------------------------
 
+$modal_open = isset($_GET['new']) || $selected_id != "" || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 if ($selected_id != "") 
@@ -172,6 +175,7 @@ else
 end_table(1);
 
 submit_add_or_update_center($selected_id == "", '', 'both');
+ma_modal_end($selected_id == "" ? _('New GL Account Class') : _('Edit GL Account Class'), $modal_open);
 
 end_form();
 

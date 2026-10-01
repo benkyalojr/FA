@@ -51,7 +51,7 @@ if (!$result['ok']) {
 
 $sales = isset($result['data']['sales']) ? $result['data']['sales'] : array();
 
-start_table(TABLESTYLE, "width=98%");
+start_table(TABLESTYLE, "width='100%'");
 table_header(array(_("Trader Invoice No"), _("Stanbest Invoice No"), _("Customer"), _("Date"),
 	_("Total"), _("Tax"), _("Receipt Sign"), _("Status"), ''));
 

@@ -79,7 +79,8 @@ if ($Mode == 'RESET')
 $result = get_all_sales_points(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE);
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 
 $th = array (_('POS Name'), _('Credit sale'), _('Cash sale'), _('Location'), _('Default account'), 
 	 '','');
@@ -109,6 +110,8 @@ $cash = db_has_cash_accounts();
 
 if (!$cash) display_note(_("To have cash POS first define at least one cash bank account."));
 
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 if ($selected_id != -1)
@@ -140,6 +143,7 @@ locations_list_row(_("POS location").':', 'location');
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New Point of Sale') : _('Edit Point of Sale'), $modal_open);
 
 end_form();
 

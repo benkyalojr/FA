@@ -255,12 +255,8 @@ $cols = array(
 	_("Currency") => array('align'=>'center'),
 	_("Amount") => array('align'=>'right', 'fun'=>'fmt_amount'), 
 	_("Balance") => array('align'=>'right', 'type'=>'amount'),
-	_("VAT") => array('fun'=>'etims_status', 'align'=>'center'),
-		array('insert'=>true, 'fun'=>'gl_view'),
-		array('insert'=>true, 'fun'=>'edit_link'),
-		array('insert'=>true, 'fun'=>'copy_link'),
-		array('insert'=>true, 'fun'=>'credit_link'),
-		array('insert'=>true, 'fun'=>'prt_link')
+	_("VAT") => array('fun'=>'etims_status', 'align'=>'center')
+	// GL, Edit, Credit, Copy and Print live in the document modal (click the #).
 	);
 
 

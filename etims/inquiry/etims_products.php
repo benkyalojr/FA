@@ -52,7 +52,7 @@ if (!$result['ok']) {
 
 $items = isset($result['data']['items']) ? $result['data']['items'] : array();
 
-start_table(TABLESTYLE, "width=98%");
+start_table(TABLESTYLE, "width='100%'");
 table_header(array(_("Item Code"), _("Description"), _("Classification"), _("Tax Type"),
 	_("Default Price"), _("Current Stock"), _("Status"), _("Registered")));
 

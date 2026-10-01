@@ -87,7 +87,8 @@ if ($Mode == 'RESET')
 $result = get_shippers(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE);
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_("Name"), _("Contact Person"), _("Phone Number"), _("Secondary Phone"), _("Address"), "", "");
 inactive_control_column($th);
 table_header($th);
@@ -113,6 +114,8 @@ end_table(1);
 
 //----------------------------------------------------------------------------------------------
 
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 if ($selected_id != -1) 
@@ -144,6 +147,7 @@ text_row_ex(_("Address:"), 'address', 50);
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New Shipping Company') : _('Edit Shipping Company'), $modal_open);
 
 end_form();
 end_page();

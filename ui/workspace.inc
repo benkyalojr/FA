@@ -23,9 +23,9 @@ function ma_ui_href($link)
 function ma_ui_navigation($applications)
 {
     $result = array();
-    $icons = array('orders'=>'receipt', 'customers'=>'people', 'AP'=>'cart', 'farmers'=>'leaf', 'stock'=>'package',
+    $icons = array('orders'=>'receipt', 'customers'=>'people', 'suppliers'=>'user', 'reports'=>'chart', 'banking'=>'wallet', 'statements'=>'book', 'AP'=>'cart', 'farmers'=>'leaf', 'stock'=>'package',
         'assets'=>'pie', 'manuf'=>'factory', 'transport'=>'truck', 'PR'=>'wallet', 'HRM'=>'people',
-        'communications'=>'message', 'proj'=>'layers', 'GL'=>'bank', 'system'=>'settings');
+        'communications'=>'message', 'proj'=>'layers', 'GL'=>'bank', 'taxes'=>'file', 'system'=>'settings');
     foreach ($applications as $app) {
         if (!$app->enabled) continue;
         $groups = array();
@@ -87,6 +87,7 @@ function ma_ui_active_application($navigation)
         return isset($navigation[$_GET['application']]) ? $_GET['application'] : '';
     $script = $_SERVER['SCRIPT_NAME'] ?? '';
     if (preg_match('~/(?:index|admin/dashboard)\.php$~', $script)) return '';
+    if (preg_match('~/reporting/reports_main\.php$~', $script)) return isset($navigation['reports']) ? 'reports' : '';
     $selected = '';
     $best = -1;
     foreach ($navigation as $id => $app) {

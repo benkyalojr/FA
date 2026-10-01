@@ -124,7 +124,8 @@ if (!isset($_POST['bank_charge_act']))
 $result = get_bank_accounts(check_value('show_inactive'));
 
 start_form(true);
-start_table(TABLESTYLE, "width='80%'");
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 
 $th = array(_("Account Name"), _("Type"), _("Currency"), _("GL Account"), 
 	_("Bank"), _("Number"), _("Bank Address"), _("Dflt"), '','');
@@ -226,6 +227,9 @@ function bank_account_settings($bank_id)
 	submit_add_or_update_center(!$bank_id, '', 'both');
 }
 
+// The editor (settings, transactions and attachments tabs) opens as a modal over the list.
+$modal_open = isset($_GET['new']) || $bank_id || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 if (!$bank_id)
 {
 	unset($_POST['_tabs_sel']); // force settings tab for new customer
@@ -264,6 +268,7 @@ tabbed_content_start('tabs', array(
 	};
 br();
 tabbed_content_end();
+ma_modal_end($bank_id ? _('Edit Bank Account') : _('New Bank Account'), $modal_open);
 
 end_form();
 

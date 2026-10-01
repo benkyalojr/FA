@@ -39,25 +39,25 @@ if (!isset($_POST['filterType']))
 
 start_form();
 
-start_table(TABLESTYLE_NOBORDER);
-start_row();
-
-ref_cells(_("Reference:"), 'Ref', '',null, _('Enter reference fragment or leave empty'));
-
-journal_types_list_cells(_("Type:"), "filterType");
-date_cells(_("From:"), 'FromDate', '', null, -user_transaction_days());
-date_cells(_("To:"), 'ToDate');
-
-end_row();
-start_row();
-ref_cells(_("Memo:"), 'Memo', '',null, _('Enter memo fragment or leave empty'));
-users_list_cells(_("User:"), 'userid', null, false);
+ma_sales_filter_start();
+ma_sales_field(_('Reference'), function() { ref_cells(null, 'Ref', '', null, _('Enter reference fragment or leave empty')); });
+ma_sales_field(_('Type'), function() { journal_types_list_cells(null, "filterType"); });
+ma_sales_field(_('Date'), function() {
+	date_cells(null, 'FromDate', '', null, -user_transaction_days());
+	date_cells(null, 'ToDate');
+});
+ma_sales_field(_('Memo'), function() { ref_cells(null, 'Memo', '', null, _('Enter memo fragment or leave empty')); });
+ma_sales_field(_('User'), function() { users_list_cells(null, 'userid', null, false); });
 if (get_company_pref('use_dimension') && isset($_POST['dimension'])) // display dimension only, when started in dimension mode
-	dimensions_list_cells(_('Dimension:'), 'dimension', null, true, null, true);
-check_cells( _("Show closed:"), 'AlsoClosed', null);
-submit_cells('Search', _("Search"), '', '', 'default');
-end_row();
-end_table();
+	ma_sales_field(_('Dimension'), function() { dimensions_list_cells(null, 'dimension', null, true, null, true); });
+ma_sales_field('', function() { check_cells(_("Show closed"), 'AlsoClosed', null); }, 'ma-sales-check');
+ma_sales_filter_end('Search', _('Search'), $_SESSION['wa_current_user']->can_access_page('SA_JOURNALENTRY')
+	? array(_('New Journal Entry'), 'gl/gl_journal.php?NewJournal=Yes') : null);
+
+function journal_status($row)
+{
+	return $row['gl_seq'] ? '<span class="ma-pill paid">'._('Closed').'</span>' : '<span class="ma-pill open">'._('Posted').'</span>';
+}
 
 function journal_pos($row)
 {
@@ -119,6 +119,7 @@ $cols = array(
 	_("Amount") => array('type'=>'amount'),
 	_("Memo"),
 	_("User"),
+	_("Status") => array('insert'=>true, 'fun'=>'journal_status'),
 	_("View") => array('insert'=>true, 'fun'=>'gl_link'),
 	array('insert'=>true, 'fun'=>'edit_link')
 );
@@ -134,7 +135,7 @@ if($_POST['filterType'] == ST_SUPPINVOICE) //add the payment column if shown sup
 
 $table =& new_db_pager('journal_tbl', $sql, $cols);
 
-$table->width = "80%";
+$table->width = "100%";
 
 display_db_pager($table);
 

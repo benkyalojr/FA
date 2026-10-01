@@ -121,8 +121,9 @@ if ($Mode == 'RESET')
 $result = get_all_tax_groups(check_value('show_inactive'));
 
 start_form();
+ma_settings_new_bar(_('Add New'));
 
-start_table(TABLESTYLE);
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_("Description"), "", "");
 inactive_control_column($th);
 
@@ -147,6 +148,8 @@ end_table(1);
 
 //-----------------------------------------------------------------------------------
 
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 if ($selected_id != -1) 
@@ -203,6 +206,7 @@ while($item = db_fetch($items))
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New Tax Group') : _('Edit Tax Group'), $modal_open);
 
 end_form();
 

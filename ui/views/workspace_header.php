@@ -10,8 +10,8 @@
     <nav class="ma-navigation">
       <a class="ma-nav-item<?= !$active_app ? ' active' : '' ?>" href="<?= ma_ui_escape(ma_ui_href('index.php')) ?>"<?= !$active_app ? ' aria-current="page"' : '' ?>><?= ma_ui_icon('gauge') ?><span><?= _('Dashboard') ?></span></a>
       <?php foreach ($navigation as $id => $entry): ?>
-      <?php if ($id === MA_SALES_APP || $id === MA_CUSTOMERS_APP): ?>
-      <a class="ma-nav-item<?= $id === $active_app ? ' active' : '' ?>" href="<?= ma_ui_escape(ma_ui_href($id === MA_CUSTOMERS_APP ? 'sales/manage/customer_list.php' : 'index.php?application='.rawurlencode($id))) ?>"<?= $id === $active_app ? ' aria-current="page"' : '' ?>><?= ma_ui_icon($entry['icon']) ?><span><?= ma_ui_escape($entry['label']) ?></span></a>
+      <?php if ($id === MA_SALES_APP || $id === MA_CUSTOMERS_APP || $id === MA_PURCHASES_APP || $id === MA_SUPPLIERS_APP || $id === MA_INVENTORY_APP || $id === 'reports' || in_array($id, array(MA_BANKING_APP, MA_LEDGER_APP, MA_STATEMENTS_APP, MA_TAXES_APP, MA_COMMUNICATIONS_APP), true)): ?>
+      <a class="ma-nav-item<?= $id === $active_app ? ' active' : '' ?>" href="<?= ma_ui_escape(ma_ui_href($id === MA_CUSTOMERS_APP ? 'sales/manage/customer_list.php' : ($id === MA_SUPPLIERS_APP ? 'purchasing/manage/supplier_list.php' : ($id === MA_INVENTORY_APP ? 'inventory/manage/item_list.php' : ($id === MA_COMMUNICATIONS_APP ? 'communications/inquiry/comm_log_inquiry.php' : ($id === MA_TAXES_APP ? 'taxes/tax_periods.php' : ($id === 'reports' ? 'reporting/reports_main.php' : 'index.php?application='.rawurlencode($id)))))))) ?>"<?= $id === $active_app ? ' aria-current="page"' : '' ?>><?= ma_ui_icon($entry['icon']) ?><span><?= ma_ui_escape($entry['label']) ?></span></a>
       <?php else: ?>
       <details class="ma-nav-group"<?= $id === $active_app ? ' open' : '' ?>>
         <summary class="ma-nav-item<?= $id === $active_app ? ' active' : '' ?>"><?= ma_ui_icon($entry['icon']) ?><span><?= ma_ui_escape($entry['label']) ?></span><?= ma_ui_icon('chevron') ?></summary>
@@ -40,7 +40,7 @@
       </div></details>
       <?php endif; endif; ?>
       <strong class="ma-top-title"><?= ma_ui_escape(ma_ui_label($title)) ?></strong>
-      <?php if (!empty($sales_toolbar)) ma_sales_topbar_new(); elseif (!empty($customers_toolbar)) ma_customers_topbar_new(); ?>
+      <?php if (!empty($finance_module)) ma_finance_topbar_new($finance_module); elseif (!empty($sales_toolbar)) ma_sales_topbar_new(); elseif (!empty($customers_toolbar)) ma_customers_topbar_new(); elseif (!empty($suppliers_toolbar)) ma_suppliers_topbar_new(); elseif (!empty($inventory_toolbar)) ma_inventory_topbar_new(); elseif (!empty($purchases_toolbar)) ma_purchases_topbar_new(); ?>
       <img id="ajaxmark" class="ma-ajaxmark" src="<?= ma_ui_escape($path_to_root) ?>/themes/default/images/ajax-loader.gif" alt="<?= ma_ui_escape(_('Loading')) ?>" style="visibility:hidden">
       <?php if (!$no_menu): ?>
       <details class="ma-dropdown ma-user"><summary><span class="ma-user-name"><?= ma_ui_escape($user_name) ?></span><span class="ma-avatar"><?= ma_ui_escape($initial) ?></span><?= ma_ui_icon('chevron') ?></summary>
@@ -56,8 +56,10 @@
       <?php endif; ?>
     </header>
     <main class="ma-content<?= !empty($list_screen) ? ' ma-sales-list' : '' ?>" id="main-content" tabindex="-1">
-    <?php if (!empty($sales_toolbar)) ma_sales_toolbar(); elseif (!empty($customers_toolbar)) ma_customers_toolbar(); ?>
-    <?php if (!empty($sales_list)) ma_sales_stats(ma_sales_active_tab()); ?>
+    <?php if (!empty($settings_ctx)) ma_settings_toolbar($settings_ctx); elseif (!empty($finance_module)) ma_finance_toolbar($finance_module); elseif (!empty($sales_toolbar)) ma_sales_toolbar(); elseif (!empty($customers_toolbar)) ma_customers_toolbar(); elseif (!empty($suppliers_toolbar)) ma_suppliers_toolbar(); elseif (!empty($inventory_toolbar)) ma_inventory_toolbar(); elseif (!empty($purchases_toolbar)) ma_purchases_toolbar(); ?>
+    <?php if (!empty($finance_list)) ma_finance_stats($finance_module); ?>
+    <?php if (!empty($sales_list)) ma_sales_stats(ma_sales_active_tab()); elseif (!empty($purchases_list)) ma_purchases_stats(ma_purchases_active_tab()); elseif (!empty($inventory_list)) ma_inventory_stats_for_screen(); ?>
+    <?php if (!empty($inventory_toolbar)) ma_inventory_header_new_bar(); ?>
     <?php if (!$is_index): ?>
       <div class="ma-page-heading"><h1><?= ma_ui_escape(ma_ui_label($title)) ?></h1><span id="hints"></span></div>
       <section class="ma-page-panel">

@@ -33,11 +33,10 @@ start_form();
     if (!isset($_POST['supplier_id']))
     	$_POST['supplier_id'] = get_global_supplier();
 
-    echo "<center>" . _("Select a Supplier: ") . "&nbsp;&nbsp;";
-	echo supplier_list('supplier_id', $_POST['supplier_id'], true, true);
-    echo "<br>";
-    check(_("Show Settled Items:"), 'ShowSettled', null, true);
-	echo "</center><br><br>";
+    ma_sales_filter_start();
+ma_sales_field(_('Supplier'), function() { echo supplier_list('supplier_id', $_POST['supplier_id'], true, true); });
+ma_sales_field('', function() { echo check(_("Show settled items"), 'ShowSettled', null, true); }, 'ma-sales-check');
+echo '</div><br>';
 	set_global_supplier($_POST['supplier_id']);
 
 	if (isset($_POST['supplier_id']) && ($_POST['supplier_id'] == ALL_TEXT)) 

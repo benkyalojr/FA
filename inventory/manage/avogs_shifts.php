@@ -166,7 +166,8 @@ if ($Mode == 'RESET') {
 $result = get_all_shift_defs(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE, "width='60%'");
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_('Key'), _('Name'), _('Start'), _('End'), _('Order'), "", "");
 inactive_control_column($th);
 table_header($th);
@@ -191,6 +192,8 @@ end_table(1);
 
 //----------------------------------------------------------------------------------
 
+$modal_open = isset($_GET['new']) || $selected_id != "" || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 if ($selected_id != '') {
@@ -214,6 +217,7 @@ text_row(_("Sort Order:"), 'sort_order', null, 6, 4);
 end_table(1);
 
 submit_add_or_update_center($selected_id == '', '', 'both');
+ma_modal_end($selected_id == "" ? _('New Shift') : _('Edit Shift'), $modal_open);
 
 end_form();
 

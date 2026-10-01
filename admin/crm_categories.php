@@ -83,7 +83,8 @@ if ($Mode == 'RESET')
 $result = get_crm_categories(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE, "width='70%'");
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 
 $th = array(_("Category Type"), _("Category Subtype"), _("Short Name"), _("Description"),  "", "&nbsp;");
 inactive_control_column($th);
@@ -115,6 +116,8 @@ inactive_control_row($th);
 end_table(1);
 
 //-------------------------------------------------------------------------------------------------
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 if ($selected_id != -1) 
@@ -146,6 +149,7 @@ textarea_row(_("Category Description:"), 'description', null, 60, 4);
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New Contact Category') : _('Edit Contact Category'), $modal_open);
 
 end_form();
 

@@ -194,14 +194,12 @@ if (isset($_POST['last']) && isset($_POST['ReconcileAll'])) {
 
 //------------------------------------------------------------------------------------------------
 start_form();
-start_table(TABLESTYLE_NOBORDER);
-start_row();
-bank_accounts_list_cells(_("Account:"), 'bank_account', null, true);
-
-bank_reconciliation_list_cells(_("Bank Statement:"), get_post('bank_account'),
-	'bank_date', null, true, _("New"));
-end_row();
-end_table();
+ma_sales_filter_start();
+ma_sales_field(_('Account'), function() { bank_accounts_list_cells(null, 'bank_account', null, true); });
+ma_sales_field(_('Bank Statement'), function() {
+	bank_reconciliation_list_cells(null, get_post('bank_account'), 'bank_date', null, true, _("New"));
+});
+echo '</div>';
 
 $result = get_max_reconciled(get_post('reconcile_date'), $_POST['bank_account']);
 
@@ -222,8 +220,6 @@ if ($row = db_fetch($result)) {
 		}
 	} 
 }
-
-echo "<hr>";
 
 div_start('summary');
 
@@ -250,7 +246,6 @@ amount_cell($difference, false, '', "difference");
 end_row();
 end_table();
 div_end();
-echo "<hr>";
 //------------------------------------------------------------------------------------------------
 
 if (!isset($_POST['bank_account']))
@@ -276,11 +271,11 @@ display_heading($act['bank_account_name']." - ".$act['bank_curr_code']);
 	   );
 	$table =& new_db_pager('trans_tbl', $sql, $cols);
 
-	$table->width = "80%";
+	$table->width = "100%";
 	display_db_pager($table);
 
 br(1);
-echo '<center>';
+echo '<center class="ma-fin-center">';
 submit('Reconcile', _("Reconcile"), true, '', null);
 submit('ReconcileAll', _("Reconcile All"), true, '');
 echo '</center>';

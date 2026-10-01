@@ -129,7 +129,8 @@ else
 	$result = get_account_types(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE);
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_("Group ID"), _("Group Name"), _("Subgroup Of"), _("Class"), "", "");
 inactive_control_column($th);
 table_header($th);
@@ -165,6 +166,8 @@ inactive_control_row($th);
 end_table(1);
 //-----------------------------------------------------------------------------------
 
+$modal_open = isset($_GET['new']) || $selected_id != "" || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 if ($selected_id != "")
@@ -202,6 +205,7 @@ else
 end_table(1);
 
 submit_add_or_update_center($selected_id == "", '', 'both');
+ma_modal_end($selected_id == "" ? _('New GL Account Group') : _('Edit GL Account Group'), $modal_open);
 
 end_form();
 

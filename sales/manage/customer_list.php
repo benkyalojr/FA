@@ -92,8 +92,8 @@ function cust_delete($row) { return ma_row_delete('del_'.$row['debtor_no'], $row
 $cols = array(
 	array('insert'=>true, 'fun'=>'cust_select', 'align'=>'center'),
 	'debtor_no' => 'skip',
-	_("Name") => array('fun'=>'cust_name_link', 'ord'=>''),
-	_("Company") => array('ord'=>''),
+	_("Name") => array('fun'=>'cust_name_link', 'ord'=>'', 'name'=>'c.name'),
+	_("Company") => array('ord'=>'', 'name'=>'c.debtor_ref'),
 	_("Sales Type"),
 	_("Currency") => array('align'=>'center'),
 	_("Phone"),

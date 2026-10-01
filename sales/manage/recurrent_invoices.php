@@ -23,8 +23,16 @@ if (user_use_date_picker())
 
 page(_($help_context = "Recurrent Invoices"), false, false, "", $js);
 
-check_db_has_template_orders(_("There is no template order in database.
-	You have to create at least one sales order marked as template to be able to define recurrent invoices."));
+// Recurrent invoices repeat a template order. Without one, explain how to start instead of a bare error.
+if (!check_empty_result("SELECT sorder.order_no FROM ".TB_PREF."sales_orders as sorder,".TB_PREF."sales_order_details as line
+	WHERE sorder.order_no = line.order_no AND sorder.type = 1 GROUP BY line.order_no"))
+{
+	echo '<div class="ma-empty"><strong>'._("No template order yet").'</strong><p>'
+		._("A recurrent invoice repeats a template order on a schedule. Create a sales order and save it as a template, then come back here to schedule it.").'</p>'
+		.'<p><a class="ma-sales-new" href="'.ma_ui_escape(ma_ui_href('sales/sales_order_entry.php?NewOrder=Yes')).'">'._("Create a Sales Order").'</a></p></div>';
+	end_page();
+	exit;
+}
 
 simple_page_mode(true);
 

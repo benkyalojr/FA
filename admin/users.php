@@ -118,7 +118,8 @@ if ($Mode == 'RESET')
 
 $result = get_users(check_value('show_inactive'));
 start_form();
-start_table(TABLESTYLE);
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 
 $th = array(_("User login"), _("Full Name"), _("Phone"),
 	_("E-mail"), _("Last Visit"), _("Access Level"), "", "");
@@ -168,6 +169,8 @@ while ($myrow = db_fetch($result))
 inactive_control_row($th);
 end_table(1);
 //-------------------------------------------------------------------------------------------------
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 $_POST['email'] = "";
@@ -231,6 +234,7 @@ check_row(_("Use popup window for reports:"), 'rep_popup', $_POST['rep_popup'],
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New User') : _('Edit User'), $modal_open);
 
 end_form();
 end_page();

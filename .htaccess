@@ -29,3 +29,9 @@ DirectoryIndex index.php
 #
 #AddType application/x-javascript .js
 #AddType text/css .css
+
+# Public invoice share links: /share/invoice/<token>
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+	RewriteRule ^share/invoice/([A-Za-z0-9_-]+)/?$ share/index.php?t=$1 [L,QSA]
+</IfModule>

@@ -2,6 +2,15 @@
 require_once __DIR__ . '/workspace.inc';
 require_once __DIR__ . '/sales.inc';
 require_once __DIR__ . '/customers.inc';
+require_once __DIR__ . '/purchases.inc';
+require_once __DIR__ . '/suppliers.inc';
+require_once __DIR__ . '/inventory.inc';
+require_once __DIR__ . '/banking.inc';
+require_once __DIR__ . '/ledger.inc';
+require_once __DIR__ . '/statements.inc';
+require_once __DIR__ . '/taxes.inc';
+require_once __DIR__ . '/communications.inc';
+require_once __DIR__ . '/settings.inc';
 
 class ma_renderer
 {
@@ -16,10 +25,24 @@ class ma_renderer
         $company_name = $db_connections[user_company()]['name'] ?? $identity['name'];
         $initial = function_exists('mb_substr') ? mb_substr($user_name, 0, 1) : substr($user_name, 0, 1);
         if ($active_app) $_SESSION['sel_app'] = $active_app;
-        $customers_toolbar = !$no_menu && ma_customers_active_tab() !== null;
+        $finance_module = !$no_menu ? ma_finance_active_module() : null;
+        $customers_toolbar = !$no_menu && !$finance_module && ma_customers_active_tab() !== null;
+        $suppliers_toolbar = !$no_menu && ma_suppliers_active_tab() !== null;
         $sales_toolbar = !$no_menu && !$customers_toolbar && ma_sales_is_sales_screen();
         $sales_list = $sales_toolbar && ma_sales_is_list_screen();
-        $list_screen = $sales_list || ($customers_toolbar && ma_customers_is_list_screen());
+        $inventory_toolbar = !$no_menu && !$customers_toolbar && !$suppliers_toolbar && !$sales_toolbar && ma_inventory_is_inventory_screen();
+        $inventory_list = $inventory_toolbar && ma_inventory_is_list_screen();
+        $purchases_toolbar = !$no_menu && !$customers_toolbar && !$suppliers_toolbar && !$sales_toolbar && !$inventory_toolbar && ma_purchases_is_purchasing_screen();
+        $purchases_list = $purchases_toolbar && ma_purchases_is_list_screen();
+        $finance_list = $finance_module && ma_finance_is_list_screen($finance_module);
+        $list_screen = $finance_list || $sales_list || $purchases_list || $inventory_list || ($customers_toolbar && ma_customers_is_list_screen()) || ($suppliers_toolbar && ma_suppliers_is_list_screen());
+        // A module's settings screens share one tab strip and the card-style list layout.
+        $settings_ctx = !$no_menu ? ma_settings_context($active_app) : null;
+        if ($settings_ctx) {
+            $finance_module = null; $customers_toolbar = $suppliers_toolbar = $sales_toolbar = $inventory_toolbar = $purchases_toolbar = false;
+            $finance_list = $sales_list = $purchases_list = $inventory_list = false;
+            $list_screen = true;
+        }
         include __DIR__ . '/views/workspace_header.php';
     }
 
@@ -50,6 +73,14 @@ class ma_renderer
         }
         if ($id === MA_SALES_APP) {
             ma_sales_overview();
+            return;
+        }
+        if ($id === MA_PURCHASES_APP) {
+            ma_purchases_overview();
+            return;
+        }
+        if (in_array($id, array(MA_BANKING_APP, MA_LEDGER_APP, MA_STATEMENTS_APP), true)) {
+            call_user_func(array(MA_BANKING_APP => 'ma_banking_overview', MA_LEDGER_APP => 'ma_ledger_overview', MA_STATEMENTS_APP => 'ma_statements_overview')[$id]);
             return;
         }
         $module = $navigation[$id];

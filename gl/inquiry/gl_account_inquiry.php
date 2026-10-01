@@ -64,32 +64,24 @@ if (!isset($_POST["amount_max"]))
 function gl_inquiry_controls()
 {
 	$dim = get_company_pref('use_dimension');
-    start_form();
+	start_form();
 
-    start_table(TABLESTYLE_NOBORDER);
-	start_row();
-    gl_all_accounts_list_cells(_("Account:"), 'account', null, false, false, _("All Accounts"));
-	date_cells(_("from:"), 'TransFromDate', '', null, -user_transaction_days());
-	date_cells(_("to:"), 'TransToDate');
-    end_row();
-	end_table();
-
-	start_table(TABLESTYLE_NOBORDER);
-	start_row();
+	ma_sales_filter_start();
+	ma_sales_field(_('Account'), function() { gl_all_accounts_list_cells(null, 'account', null, false, false, _("All Accounts")); });
+	ma_sales_field(_('Date'), function() {
+		date_cells(null, 'TransFromDate', '', null, -user_transaction_days());
+		date_cells(null, 'TransToDate');
+	});
+	ma_sales_field(_('Type'), function() { journal_types_list_cells(null, 'filterType'); });
+	ma_sales_field(_('Amount min'), function() { small_amount_cells(null, 'amount_min', null, " "); });
+	ma_sales_field(_('Amount max'), function() { small_amount_cells(null, 'amount_max', null, " "); });
+	ma_sales_field(_('Memo'), function() { ref_cells(null, 'Memo', '', null, _('Enter memo fragment or leave empty')); });
 	if ($dim >= 1)
-		dimensions_list_cells(_("Dimension")." 1:", 'Dimension', null, true, " ", false, 1);
+		ma_sales_field(_('Dimension').' 1', function() { dimensions_list_cells(null, 'Dimension', null, true, " ", false, 1); });
 	if ($dim > 1)
-		dimensions_list_cells(_("Dimension")." 2:", 'Dimension2', null, true, " ", false, 2);
-
-	ref_cells(_("Memo:"), 'Memo', '',null, _('Enter memo fragment or leave empty'));
-	small_amount_cells(_("Amount min:"), 'amount_min', null, " ");
-	small_amount_cells(_("Amount max:"), 'amount_max', null, " ");
-	submit_cells('Show',_("Show"),'','', 'default');
-	end_row();
-	end_table();
-
-	echo '<hr>';
-    end_form();
+		ma_sales_field(_('Dimension').' 2', function() { dimensions_list_cells(null, 'Dimension2', null, true, " ", false, 2); });
+	ma_sales_filter_end('Show', _('Show'), null, _('Show'));
+	end_form();
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -109,8 +101,9 @@ function show_results()
     	$_POST['Dimension'] = 0;
     if (!isset($_POST['Dimension2']))
     	$_POST['Dimension2'] = 0;
+	$type_filter = (isset($_POST['filterType']) && $_POST['filterType'] !== '' && $_POST['filterType'] != -1) ? $_POST['filterType'] : null;
 	$result = get_gl_transactions($_POST['TransFromDate'], $_POST['TransToDate'], -1,
-    	$_POST["account"], $_POST['Dimension'], $_POST['Dimension2'], null,
+    	$_POST["account"], $_POST['Dimension'], $_POST['Dimension2'], $type_filter,
     	input_num('amount_min'), input_num('amount_max'), null, null, $_POST['Memo']);
 
 	$colspan = ($dim == 2 ? "7" : ($dim == 1 ? "6" : "5"));

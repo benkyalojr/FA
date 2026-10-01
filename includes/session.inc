@@ -399,6 +399,9 @@ include_once($path_to_root . "/includes/hooks.inc");
 //
 // include all extensions hook files.
 //
+// The list is generated at install time; without it no extensions are active.
+if (!isset($installed_extensions) || !is_array($installed_extensions))
+	$installed_extensions = array();
 foreach ($installed_extensions as $ext)
 {
 	if (file_exists($path_to_root.'/'.$ext['path'].'/hooks.php'))
@@ -595,9 +598,15 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 
 		$SysPrefs->refresh();
 	}
-	if (!isset($_SESSION["App"])) {
+	// The menu is cached in the session. Rebuild it when the menu code changes so
+	// new modules appear without signing out (rights are still read at sign-in).
+	$menu_version = filemtime($path_to_root.'/frontaccounting.php');
+	foreach (glob($path_to_root.'/applications/*.php') as $menu_file)
+		$menu_version = max($menu_version, filemtime($menu_file));
+	if (!isset($_SESSION["App"]) || ($_SESSION['menu_code_version'] ?? 0) != $menu_version) {
 		$_SESSION["App"] = new front_accounting();
 		$_SESSION["App"]->init();
+		$_SESSION['menu_code_version'] = $menu_version;
 	}
 }
 

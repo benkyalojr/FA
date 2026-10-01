@@ -41,9 +41,9 @@ while ($row = db_fetch($res))
 	$current[$row['event_key'] . '|' . $row['channel']] = $row['is_enabled'];
 
 start_form();
-label_row('', _('Nothing is sent for an event/channel combination until it is checked here, even if the channel itself is enabled and configured under Communications Module Setup.'), '', '', 'helphint');
+echo '<p class="ma-cfg-hint ma-gw-intro">'.htmlspecialchars(_('Nothing is sent for an event/channel combination until it is ticked here, even if the channel is switched on and configured.')).'</p>';
 
-start_table(TABLESTYLE, "width=80%");
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_("Event"));
 foreach ($comm_channels as $label)
 	$th[] = $label;
@@ -63,6 +63,6 @@ foreach ($comm_events as $event_key => $ev) {
 	end_row();
 }
 end_table(1);
-submit_center('update', _("Update"), true, '', 'default');
+echo '<div class="ma-cfg-actions"><button class="ma-btn ma-btn-primary" type="submit" name="update" value="1">'.htmlspecialchars(_('Save rules')).'</button></div>';
 end_form();
 end_page();

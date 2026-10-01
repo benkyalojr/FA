@@ -9,6 +9,12 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+	// Public invoice share links (/share/invoice/<token>) never need a login.
+	if (preg_match('~/share/invoice/([A-Za-z0-9_-]{20,64})/?$~', (string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH), $share_m)) {
+		$_GET['t'] = $share_m[1];
+		require __DIR__.'/share/index.php';
+		exit;
+	}
 	$path_to_root=".";
 	if (!file_exists($path_to_root.'/config_db.php'))
 		header("Location: ".$path_to_root."/install/index.php");

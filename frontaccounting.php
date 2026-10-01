@@ -15,11 +15,16 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 	include_once($path_to_root . '/applications/customers.php');
 	include_once($path_to_root . '/applications/customer_directory.php');
 	include_once($path_to_root . '/applications/suppliers.php');
+	include_once($path_to_root . '/applications/supplier_directory.php');
 	include_once($path_to_root . '/applications/inventory.php');
 	include_once($path_to_root . '/applications/fixed_assets.php');
 	include_once($path_to_root . '/applications/manufacturing.php');
 	include_once($path_to_root . '/applications/dimensions.php');
+	include_once($path_to_root . '/applications/banking.php');
 	include_once($path_to_root . '/applications/generalledger.php');
+	include_once($path_to_root . '/applications/statements.php');
+	include_once($path_to_root . '/applications/taxes.php');
+	include_once($path_to_root . '/applications/report_directory.php');
 	include_once($path_to_root . '/applications/communications.php');
 	include_once($path_to_root . '/applications/setup.php');
 	include_once($path_to_root . '/installed_extensions.php');
@@ -81,6 +86,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 			$this->add_application(new customers_app());
 			$this->add_application(new customer_directory_app());
 			$this->add_application(new suppliers_app());
+			$this->add_application(new supplier_directory_app());
 			$this->add_application(new inventory_app());
 			if (get_company_pref('use_manufacturing'))
 				$this->add_application(new manufacturing_app());
@@ -89,7 +95,11 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 			if (get_company_pref('use_communications'))
 				$this->add_application(new communications_app());
 			$this->add_application(new dimensions_app());
+			$this->add_application(new banking_app());
 			$this->add_application(new general_ledger_app());
+			$this->add_application(new statements_app());
+			$this->add_application(new taxes_app());
+			$this->add_application(new report_directory_app());
 
 			hook_invoke_all('install_tabs', $this);
 

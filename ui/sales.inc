@@ -29,7 +29,7 @@ function ma_sales_active_tab()
     $dir = basename(dirname($script));
     $get = function ($key) { return is_string($_GET[$key] ?? null) ? $_GET[$key] : null; };
     if ($name === 'index.php') return $get('application') === MA_SALES_APP ? 'overview' : null;
-    if ($name === 'reports_main.php') return $get('Class') === '0' ? 'reports' : null;
+    if ($name === 'reports_main.php') return null; // the Reports workspace owns the catalogue
     if ($dir === 'manage') return strpos($script, '/sales/') !== false ? 'settings' : null;
     if (strpos($script, '/sales/') === false) return null;
     switch ($name) {
@@ -102,7 +102,7 @@ function ma_sales_toolbar()
     }
     echo '</nav><div class="ma-sales-actions">';
     ma_sales_menu(_('Reports'), 'chart', ma_sales_module_links(1));
-    ma_sales_menu(_('Settings'), 'settings', ma_sales_module_links(2));
+    ma_settings_button(MA_SALES_APP);
     echo '</div></div>';
 }
 
@@ -204,7 +204,7 @@ function ma_sales_overview()
                 .((float)$row['balance'] > 0.005 ? ' due' : '').'">'.ma_ui_escape($num($row['balance'])).'</td></tr>';
         echo '</tbody></table></div>';
     }
-    echo '</section></div><section class="ma-panel"><div class="ma-panel-head"><h2>'.ma_ui_escape(_('Recent Invoices')).'</h2><a class="ma-sales-link" href="'
+    echo '</section></div><section class="ma-panel"><div class="ma-panel-head"><h2>'.ma_ui_escape(_('Recent Customer Invoices')).'</h2><a class="ma-sales-link" href="'
         .ma_ui_escape(ma_ui_href('sales/inquiry/customer_inquiry.php?filterType=1')).'">'.ma_ui_escape(_('View all')).' &rsaquo;</a></div>';
     if (!$m['recent']) echo '<div class="ma-empty">'.ma_ui_escape(_('No invoices yet.')).'</div>';
     else {
@@ -275,18 +275,20 @@ function ma_sales_field($label, $render, $class = '')
         .($label !== '' ? '<span class="ma-sales-field-label">'.ma_ui_escape($label).'</span>' : '').'<div>'.$html.'</div></div>';
 }
 
-function ma_sales_filter_end($search_name, $search_hint, $new_action = false)
+function ma_sales_filter_end($search_name, $search_hint, $new_action = false, $label = null)
 {
     echo '<div class="ma-sales-filter-actions">';
     ob_start();
-    submit_cells($search_name, _('Search'), '', $search_hint, 'default');
+    submit_cells($search_name, $label !== null ? $label : _('Search'), '', $search_hint, 'default');
     $search = preg_replace('~</?td[^>]*>~i', '', ob_get_clean());
     echo preg_replace('~<img[^>]*>~i', ma_ui_icon('search'), $search);
     $tab = ma_sales_active_tab();
     $new = $new_action !== false ? $new_action : ma_sales_new_action($tab);
-    if ($new)
-        echo '<a class="ma-sales-new" href="'.ma_ui_escape(ma_ui_href($new[1])).'">'.ma_ui_icon('plus').' '.ma_ui_escape($new[0]).'</a>';
-    elseif ($tab === 'credits' && $new_action === false)
+    // One action (label, link) or a list of them.
+    $actions = ($new && is_array($new[0] ?? null)) ? $new : ($new ? array($new) : array());
+    foreach ($actions as $act)
+        echo '<a class="ma-sales-new" href="'.ma_ui_escape(ma_ui_href($act[1])).'">'.ma_ui_icon('plus').' '.ma_ui_escape($act[0]).'</a>';
+    if (!$actions && $tab === 'credits' && $new_action === false)
         echo '<span class="ma-sales-hint">'.ma_ui_escape(_('Credit notes are raised against an invoice: open Invoices and choose Credit This.')).' <a href="'
             .ma_ui_escape(ma_ui_href('sales/inquiry/customer_inquiry.php?filterType=1')).'">'.ma_ui_escape(_('Go to Invoices')).' &rsaquo;</a></span>';
     echo '</div></div>';

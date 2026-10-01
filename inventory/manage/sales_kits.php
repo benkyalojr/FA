@@ -12,6 +12,11 @@
 $page_security = 'SA_SALESKIT';
 $path_to_root = "../..";
 include_once($path_to_root . "/includes/session.inc");
+include_once($path_to_root . "/includes/db_pager.inc");
+include_once($path_to_root . "/ui/inventory.inc");
+// Edit links open the kit form directly.
+if (isset($_GET['item_code']) && is_string($_GET['item_code']))
+	$_POST['item_code'] = $_GET['item_code'];
 
 $js = "";
 if ($SysPrefs->use_popup_windows && $SysPrefs->use_popup_search)
@@ -179,11 +184,36 @@ if ($Mode == 'RESET')
 //--------------------------------------------------------------------------------------------------
 
 start_form();
+ma_new_bar();
 
+// List of kits; the kit form below opens in a modal.
+$kit_sql = "SELECT i.item_code, i.description, c.description AS category, COUNT(*) AS components
+	FROM ".TB_PREF."item_codes i LEFT JOIN ".TB_PREF."stock_category c ON c.category_id=i.category_id
+	WHERE i.is_foreign=0 AND i.item_code!=i.stock_id GROUP BY i.item_code, i.description, c.description";
+function kit_edit($row)
+{
+	return '<a class="ma-row-edit" href="'.ma_ui_escape(ma_ui_href('inventory/manage/sales_kits.php?item_code='.urlencode($row['item_code']))).'">'
+		.ma_ui_icon('file').' '._('Edit').'</a>';
+}
+$kit_cols = array(_("Kit / Alias Code") => array('ord'=>'', 'name'=>'i.item_code'), _("Description") => array('ord'=>'', 'name'=>'i.description'), _("Category"),
+	_("Components") => array('align'=>'right'), array('insert'=>true, 'fun'=>'kit_edit'));
+$kit_table =& new_db_pager('kit_tbl', $kit_sql, $kit_cols);
+$kit_table->width = '100%';
+display_db_pager($kit_table);
+echo '<br>';
+
+$modal_open = isset($_GET['new']) || isset($_GET['item_code']) || get_post('item_code') !== '' || list_updated('item_code')
+	|| get_post('update_name') || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM', 'Edit', 'Delete'));
+ma_modal_begin();
 echo "<center>" . _("Select a sale kit:") . "&nbsp;";
 echo sales_kits_list('item_code', null, _('New kit'), true);
 echo "</center><br>";
 $props = get_kit_props($_POST['item_code']);
+if (get_post('item_code') != '' && !is_array($props)) {
+	// Unknown or removed kit code: start a new kit instead of reading a missing record.
+	$_POST['item_code'] = '';
+	$props = array('description' => '', 'category_id' => '');
+}
 
 if (list_updated('item_code')) {
 	if (get_post('item_code') == '')
@@ -231,6 +261,8 @@ if (get_post('item_code') == '') {
 		stock_categories_list_row(_("Category:"), 'category', null);
 	}
 	$res = get_item_edit_info(get_post('component'));
+	if (!$res) // no component chosen yet (e.g. with the item search list enabled)
+		$res = array('decimals' => '', 'units' => '');
 	$dec =  $res["decimals"] == '' ? 0 : $res["decimals"];
 	$units = $res["units"] == '' ? _('kits') : $res["units"];
 	if (list_updated('component')) 
@@ -244,6 +276,7 @@ if (get_post('item_code') == '') {
 
 	end_table(1);
 	submit_add_or_update_center($selected_id == -1, '', 'both');
+	ma_modal_end(get_post('item_code') == '' ? _('New Kit') : _('Edit Kit'), $modal_open);
 	end_form();
 //----------------------------------------------------------------------------------
 

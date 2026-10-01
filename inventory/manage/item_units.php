@@ -90,7 +90,8 @@ if ($Mode == 'RESET')
 $result = get_all_item_units(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE, "width='40%'");
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_('Unit'), _('Description'), _('Decimals'), "", "");
 inactive_control_column($th);
 
@@ -117,6 +118,8 @@ end_table(1);
 
 //----------------------------------------------------------------------------------
 
+$modal_open = isset($_GET['new']) || $selected_id != "" || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 if ($selected_id != '') 
@@ -144,6 +147,7 @@ number_list_row(_("Decimal Places:"), 'decimals', null, 0, 6, _("User Quantity D
 end_table(1);
 
 submit_add_or_update_center($selected_id == '', '', 'both');
+ma_modal_end($selected_id == "" ? _('New Unit of Measure') : _('Edit Unit of Measure'), $modal_open);
 
 end_form();
 

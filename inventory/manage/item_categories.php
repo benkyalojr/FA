@@ -12,6 +12,7 @@
 $page_security = 'SA_ITEMCATEGORY';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
+include_once($path_to_root . "/ui/inventory.inc");
 
 if (isset($_GET['FixedAsset'])) {
   $page_security = 'SA_ASSETCATEGORY';
@@ -112,7 +113,8 @@ $fixed_asset = is_fixed_asset(get_post('mb_flag'));
 $result = get_item_categories(check_value('show_inactive'), $fixed_asset);
 
 start_form();
-start_table(TABLESTYLE, "width='80%'");
+ma_new_bar();
+start_table(TABLESTYLE, "width='100%'");
 if ($fixed_asset) {
 	$th = array(_("Name"), _("Tax type"), _("Units"), _("Sales Act"),
 		_("Asset Account"), _("Deprecation Cost Account"),
@@ -154,6 +156,8 @@ end_table();
 echo '<br>';
 //----------------------------------------------------------------------------------
 
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 div_start('details');
 start_table(TABLESTYLE2);
 
@@ -267,6 +271,7 @@ if ($dim < 2)
 end_table(1);
 div_end();
 submit_add_or_update_center($selected_id == -1, '', 'both', true);
+ma_modal_end($selected_id == -1 ? _('New Category') : _('Edit Category'), $modal_open);
 
 end_form();
 

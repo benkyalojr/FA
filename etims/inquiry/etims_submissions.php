@@ -23,7 +23,7 @@ if (isset($_GET['retry'])) {
 	display_notification(_('The submission will be retried on the next scheduler run.'));
 }
 
-start_table(TABLESTYLE, "width=98%");
+start_table(TABLESTYLE, "width='100%'");
 table_header(array(_("Trans"), _("Type"), _("Queue Status"), _("Attempts"), _("Last Error"),
 	_("KRA Trader Invoice No"), _("Receipt Sign"), _("Stamped At"), _("QR"), ''));
 
@@ -43,9 +43,9 @@ while ($row = db_fetch($result)) {
 	label_cell(isset($doc_labels[$row['doc_kind']]) ? $doc_labels[$row['doc_kind']] : html_specials_encode($row['doc_kind']));
 
 	if ($row['status'] === 'stamped')
-		label_cell("<span style='color: green; font-weight: bold;'>" . _('Stamped') . "</span>");
+		label_cell("<span class='ma-pill paid'>" . _('Stamped') . "</span>");
 	elseif ($row['task_status'] === 'failed')
-		label_cell("<span class='err_msg'>" . _('Failed') . "</span>");
+		label_cell("<span class='ma-pill late'>" . _('Failed') . "</span>");
 	else
 		label_cell(html_specials_encode((string)$row['task_status']));
 
@@ -63,7 +63,7 @@ while ($row = db_fetch($result)) {
 		label_cell('');
 
 	if ($row['status'] !== 'stamped' && $row['task_status'] === 'failed')
-		echo "<td><a href='" . $_SERVER['PHP_SELF'] . "?retry=" . $row['id'] . "'>" . _('Retry') . "</a></td>";
+		echo "<td><a class='ma-sales-link' href='" . $_SERVER['PHP_SELF'] . "?retry=" . $row['id'] . "'>" . _('Retry') . "</a></td>";
 	else
 		label_cell('');
 

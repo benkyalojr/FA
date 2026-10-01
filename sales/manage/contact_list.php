@@ -84,7 +84,7 @@ $cols = array(
 	_("Email") => 'email',
 	'inactive' => 'skip',
 	'debtor_no' => 'skip',
-	_("Customer") => array('ord'=>''),
+	_("Customer") => array('ord'=>'', 'name'=>'customer'),
 	_("Branch"),
 	array('insert'=>true, 'fun'=>'ct_edit'),
 );

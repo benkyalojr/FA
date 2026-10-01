@@ -12,6 +12,7 @@
 $page_security = 'SA_ITEMSTRANSVIEW';
 $path_to_root = "../..";
 include_once($path_to_root . "/includes/session.inc");
+include_once($path_to_root . "/ui/inventory.inc");
 
 include_once($path_to_root . "/includes/date_functions.inc");
 include_once($path_to_root . "/includes/banking.inc");
@@ -57,37 +58,31 @@ hidden('fixed_asset');
 if (!isset($_POST['stock_id']))
 	$_POST['stock_id'] = get_global_stock_item();
 
-start_table(TABLESTYLE_NOBORDER);
-start_row();
+ma_sales_filter_start();
 if (!$page_nested)
 {
 	if (get_post('fixed_asset') == 1) {
-		stock_items_list_cells(_("Item:"), 'stock_id', $_POST['stock_id'],
-			false, false, check_value('show_inactive'), false, array('fixed_asset' => true));
-		check_cells(_("Show inactive:"), 'show_inactive', null, true);
+		ma_sales_field(_('Item'), function() {
+			stock_items_list_cells(null, 'stock_id', $_POST['stock_id'],
+				false, false, check_value('show_inactive'), false, array('fixed_asset' => true));
+		});
+		ma_sales_field('', function() { check_cells(_("Show inactive"), 'show_inactive', null, true); }, 'ma-sales-check');
 
 		if (get_post('_show_inactive_update')) {
 			$Ajax->activate('stock_id');
 			set_focus('stock_id');
 		}
 	} else
-		stock_costable_items_list_cells(_("Item:"), 'stock_id', $_POST['stock_id']);
+		ma_sales_field(_('Item'), function() { stock_costable_items_list_cells(null, 'stock_id', $_POST['stock_id']); });
 }
-
-end_row();
-end_table();
-
-start_table(TABLESTYLE_NOBORDER);
-start_row();
-
-locations_list_cells(_("From Location:"), 'StockLocation', null, true, false, (get_post('fixed_asset') == 1));
-
-date_cells(_("From:"), 'AfterDate', '', null, -user_transaction_days());
-date_cells(_("To:"), 'BeforeDate');
-
-submit_cells('ShowMoves',_("Show Movements"),'',_('Refresh Inquiry'), 'default');
-end_row();
-end_table();
+ma_sales_field(_('Location'), function() {
+	locations_list_cells(null, 'StockLocation', null, true, false, (get_post('fixed_asset') == 1));
+});
+ma_sales_field(_('Date'), function() {
+	date_cells(null, 'AfterDate', '', null, -user_transaction_days());
+	date_cells(null, 'BeforeDate');
+});
+ma_sales_filter_end('ShowMoves', _('Refresh Inquiry'), ma_inventory_new_action(ma_inventory_active_tab()));
 end_form();
 
 set_global_stock_item($_POST['stock_id']);
@@ -101,7 +96,7 @@ $result = get_stock_movements($_POST['stock_id'], $_POST['StockLocation'],
 
 div_start('doc_tbl');
 start_table(TABLESTYLE);
-$th = array(_("Type"), _("#"), _("Reference"));
+$th = array(_("Type"), _("Reference"), _("Standard Cost"));
 
 if ($display_location)
 	array_push($th, _("Location"));
@@ -154,9 +149,8 @@ while ($myrow = db_fetch($result))
 
 	label_cell($type_name);
 
-	label_cell(get_trans_view_str($myrow["type"], $myrow["trans_no"]), "nowrap align='right'");
-
 	label_cell(get_trans_view_str($myrow["type"], $myrow["trans_no"], $myrow["reference"]));
+	amount_cell($myrow["standard_cost"]);
 
 	if($display_location) {
 		label_cell($myrow['loc_code']);

@@ -80,7 +80,8 @@ if ($Mode == 'RESET')
 
 $result = get_all_printers();
 start_form();
-start_table(TABLESTYLE);
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_("Name"), _("Description"), _("Host"), _("Printer Queue"),'','');
 table_header($th);
 
@@ -108,6 +109,8 @@ echo '<br>';
 
 start_form();
 
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 if ($selected_id != -1) 
@@ -139,6 +142,7 @@ text_row(_("Timeout").':', 'tout', null, 5, 5);
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New Printer') : _('Edit Printer'), $modal_open);
 
 end_form();
 

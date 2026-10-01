@@ -130,10 +130,11 @@ function display_fiscalyears()
 
 	$result = get_all_fiscalyears();
 	start_form();
+ma_settings_new_bar(_('Add New'));
 	display_note(_("Warning: Deleting a fiscal year all transactions 
 		are removed and converted into relevant balances. This process is irreversible!"), 
 		0, 1, "class='currentfg'");
-	start_table(TABLESTYLE);
+	start_table(TABLESTYLE, "width='100%'");
 
 	$th = array(_("Fiscal Year Begin"), _("Fiscal Year End"), _("Closed"), "", "");
 	table_header($th);
@@ -183,7 +184,9 @@ function display_fiscalyear_edit($selected_id)
 	global $Mode;
 
 	start_form();
-	start_table(TABLESTYLE2);
+	$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
+start_table(TABLESTYLE2);
 
 	if ($selected_id != -1)
 	{
@@ -218,6 +221,7 @@ function display_fiscalyear_edit($selected_id)
 	end_table(1);
 
 	submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New Fiscal Year') : _('Edit Fiscal Year'), $modal_open);
 
 	end_form();
 }

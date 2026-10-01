@@ -22,6 +22,9 @@ if ($SysPrefs->use_popup_windows)
 	$js .= get_js_open_window(900, 500);
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
+// Tab links preselect a transaction type, e.g. ?filterType=1 for invoices.
+if (!isset($_POST['filterType']) && isset($_GET['filterType']) && is_scalar($_GET['filterType']))
+	$_POST['filterType'] = $_GET['filterType'];
 page(_($help_context = "Supplier Inquiry"), isset($_GET['supplier_id']), false, "", $js);
 
 if (isset($_GET['supplier_id'])){
@@ -135,24 +138,18 @@ start_form();
 if (!isset($_POST['supplier_id']))
 	$_POST['supplier_id'] = get_global_supplier();
 
-start_table(TABLESTYLE_NOBORDER);
-start_row();
-
+ma_sales_filter_start();
 if (!$page_nested)
-	supplier_list_cells(_("Select a supplier:"), 'supplier_id', null, true, true, false, true);
-
-supp_transactions_list_cell("filterType", null, true);
-
+	ma_sales_field(_('Supplier'), function() { supplier_list_cells(null, 'supplier_id', null, true, true, false, true); });
+ma_sales_field(_('Type'), function() { supp_transactions_list_cell("filterType", null, true); });
 if ($_POST['filterType'] != '2')
 {
-	date_cells(_("From:"), 'TransAfterDate', '', null, -user_transaction_days());
-	date_cells(_("To:"), 'TransToDate');
+	ma_sales_field(_('Date'), function() {
+		date_cells(null, 'TransAfterDate', '', null, -user_transaction_days());
+		date_cells(null, 'TransToDate');
+	});
 }
-
-submit_cells('RefreshInquiry', _("Search"),'',_('Refresh Inquiry'), 'default');
-
-end_row();
-end_table();
+ma_sales_filter_end('RefreshInquiry', _('Refresh Inquiry'), ma_purchases_new_action(ma_purchases_active_tab()));
 set_global_supplier($_POST['supplier_id']);
 
 //------------------------------------------------------------------------------------------------

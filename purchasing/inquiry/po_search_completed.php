@@ -84,30 +84,19 @@ if (get_post('SearchOrders'))
 
 start_form();
 
-start_table(TABLESTYLE_NOBORDER);
-start_row();
-ref_cells(_("#:"), 'order_number', '',null, '', true);
-
-date_cells(_("from:"), 'OrdersAfterDate', '', null, -user_transaction_days());
-date_cells(_("to:"), 'OrdersToDate');
-
-locations_list_cells(_("into location:"), 'StockLocation', null, true);
-end_row();
-end_table();
-
-start_table(TABLESTYLE_NOBORDER);
-start_row();
-
-stock_items_list_cells(_("for item:"), 'SelectStockFromList', null, true);
-
+ma_sales_filter_start();
+ma_sales_field(_('#'), function() { ref_cells(null, 'order_number', '', null, '', true); });
+ma_sales_field(_('Date'), function() {
+	date_cells(null, 'OrdersAfterDate', '', null, -user_transaction_days());
+	date_cells(null, 'OrdersToDate');
+});
+ma_sales_field(_('Into location'), function() { locations_list_cells(null, 'StockLocation', null, true); });
+ma_sales_field(_('Item'), function() { stock_items_list_cells(null, 'SelectStockFromList', null, true); });
 if (!$page_nested)
-	supplier_list_cells(_("Select a supplier: "), 'supplier_id', null, true, true);
-
-check_cells(_('Also closed:'), 'also_closed', check_value('also_closed'));
-
-submit_cells('SearchOrders', _("Search"),'',_('Select documents'), 'default');
-end_row();
-end_table(1);
+	ma_sales_field(_('Supplier'), function() { supplier_list_cells(null, 'supplier_id', null, true, true); });
+ma_sales_field('', function() { check_cells(_('Also closed'), 'also_closed', check_value('also_closed')); }, 'ma-sales-check');
+ma_sales_filter_end('SearchOrders', _('Select documents'), ma_purchases_new_action('orders'));
+echo '<br>';
 
 //---------------------------------------------------------------------------------------------
 

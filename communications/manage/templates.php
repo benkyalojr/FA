@@ -82,6 +82,7 @@ if ($Mode == 'RESET')
 $result = get_comm_templates();
 
 start_form();
+ma_settings_new_bar(_('Add New'));
 start_table(TABLESTYLE_NOBORDER);
 // Submit the whole form when the module changes so the result table is
 // re-rendered with the selected filter.  The default async selector update
@@ -89,7 +90,7 @@ start_table(TABLESTYLE_NOBORDER);
 array_selector_row(_('Module:'), 'module_filter', $module_filter, $comm_modules,
 	array('select_submit' => true, 'async' => false));
 end_table(1);
-start_table(TABLESTYLE, "width=95%");
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_("Event"), _("Channel"), _("Subject"), _("Body"), _("Active"), '', '');
 table_header($th);
 
@@ -110,6 +111,8 @@ while ($myrow = db_fetch($result))
 }
 end_table(1);
 
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 if ($selected_id != -1)
 {
@@ -135,5 +138,6 @@ check_row(_("Active:"), 'is_active', null);
 
 end_table(1);
 submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New Template') : _('Edit Template'), $modal_open);
 end_form();
 end_page();

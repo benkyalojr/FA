@@ -26,7 +26,7 @@ function comm_mask_secret($value)
 	$value = (string)$value;
 	if ($value === '')
 		return _('Not set');
-	return str_repeat('*', 8) . ' (' . sprintf(_('%s characters stored'), strlen($value)) . ')';
+	return sprintf(_('%d characters stored'), strlen($value));
 }
 
 function comm_show_test_result($result)
@@ -153,94 +153,92 @@ if (isset($_POST['SEND_TEST_WHATSAPP'])) {
 		_('This is a test message from ') . (string)get_company_pref('coy_name'));
 }
 
-// ================= SMS =================
-$sms_cfg = comm_get_gateway_config('sms');
+// ================= page =================
+$e = function ($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); };
+$pill = function ($text, $tone) use ($e) { return '<span class="ma-pill '.$tone.'">'.$e($text).'</span>'; };
+$field = function ($label, $name, $value, $opts = array()) use ($e) {
+	$type = $opts['type'] ?? 'text';
+	return '<label class="'.($opts['class'] ?? '').'">'.$e($label).'<input type="'.$type.'" name="'.$e($name).'" value="'.($type === 'password' ? '' : $e($value)).'" maxlength="'.(int)($opts['max'] ?? 255).'"'
+		.(isset($opts['placeholder']) ? ' placeholder="'.$e($opts['placeholder']).'"' : '').($type === 'password' ? ' autocomplete="new-password"' : '').'></label>';
+};
+$card_start = function ($title, $badges) use ($e) {
+	return '<form method="post" action="'.$e($_SERVER['PHP_SELF']).'"><section class="ma-panel ma-cfg-card ma-gw"><div class="ma-panel-head"><h2>'.$e($title).'</h2><span class="ma-gw-badges">'.$badges.'</span></div><div class="ma-cfg-body">';
+};
+$test_block = function ($label, $name, $placeholder, $button, $result) use ($e) {
+	$h = '<div class="ma-gw-test"><label>'.$e($label).'<input type="text" name="'.$e($name).'" value="'.$e(get_post($name)).'" placeholder="'.$e($placeholder).'"></label>'
+		.'<button class="ma-btn ma-btn-secondary" type="submit" name="'.$e($button[0]).'" value="1">'.$e($button[1]).'</button></div>';
+	if ($result !== null)
+		$h .= '<div class="ma-cfg-result '.(!empty($result['ok']) ? 'ok' : 'bad').'" role="status">'.$e((string)$result['response']).'</div>';
+	return $h;
+};
+$enabled_badge = function ($channel) use ($pill) {
+	return get_company_pref('use_communications_'.$channel) ? $pill(_('Enabled'), 'paid') : $pill(_('Switched off'), 'pending');
+};
+$note = function ($text) use ($e) { return '<p class="ma-cfg-hint">'.$e($text).'</p>'; };
+$save = function ($name, $label) use ($e) { return '<div class="ma-cfg-actions"><button class="ma-btn ma-btn-primary" type="submit" name="'.$e($name).'" value="1">'.$e($label).'</button></div>'; };
+$card_end = '</div></section></form>';
 
-start_form();
-start_table(TABLESTYLE2, "width='80%'");
-table_section_title(_('SMS Gateway (DigiSoft Solutions)'));
-text_row(_('Send message URL'), 'sms_send_url', $sms_cfg && $sms_cfg['send_url'] ? $sms_cfg['send_url'] : comm_sms_default_send_url(), 70, 255);
-text_row(_('Balance check URL'), 'sms_balance_url', $sms_cfg && $sms_cfg['balance_url'] ? $sms_cfg['balance_url'] : comm_sms_default_balance_url(), 70, 255);
-text_row(_('Partner ID'), 'sms_sender_id', $sms_cfg ? $sms_cfg['sender_id'] : '', 20, 50);
-text_row(_('Shortcode / sender name'), 'sms_sender_name', $sms_cfg ? $sms_cfg['sender_name'] : '', 30, 100);
-label_row(_('API key'), "<input type='password' name='sms_api_key' size='50' maxlength='128' autocomplete='new-password'>");
-label_row('', ($sms_cfg ? sprintf(_('Stored key: %s.'), comm_mask_secret($sms_cfg['api_key'])) . ' ' . _('Leave blank to keep it.') : _('Required on first save.')), '', '', 'helphint');
+echo '<div class="ma-cfg">';
+echo '<p class="ma-cfg-hint ma-gw-intro">'.$e(_('Set up each channel here. Turn channels on or off under Communications Module Setup, and choose which events send under Notification Rules.')).'</p>';
+
+// ---- SMS
+$sms_cfg = comm_get_gateway_config('sms');
+echo $card_start(_('SMS (DigiSoft Solutions)'), ($sms_cfg && !empty($sms_cfg['api_key']) ? $pill(_('Configured'), 'paid') : $pill(_('Not configured'), 'late')).' '.$enabled_badge('sms'));
+echo '<div class="ma-gw-grid">'
+	.$field(_('Send message URL'), 'sms_send_url', $sms_cfg && $sms_cfg['send_url'] ? $sms_cfg['send_url'] : comm_sms_default_send_url(), array('class' => 'wide'))
+	.$field(_('Balance check URL'), 'sms_balance_url', $sms_cfg && $sms_cfg['balance_url'] ? $sms_cfg['balance_url'] : comm_sms_default_balance_url(), array('class' => 'wide'))
+	.$field(_('Partner ID'), 'sms_sender_id', $sms_cfg ? $sms_cfg['sender_id'] : '', array('max' => 50))
+	.$field(_('Shortcode / sender name'), 'sms_sender_name', $sms_cfg ? $sms_cfg['sender_name'] : '', array('max' => 100))
+	.$field(_('API key'), 'sms_api_key', '', array('type' => 'password', 'max' => 128, 'placeholder' => $sms_cfg ? _('Leave blank to keep the stored key') : _('Required on first save')))
+	.'</div>';
+echo $note($sms_cfg ? sprintf(_('Stored key: %s.'), comm_mask_secret($sms_cfg['api_key'])) : _('No API key stored yet.'));
 if ($sms_cfg && !empty($sms_cfg['api_key'])) {
 	$balance = comm_sms_digisoft_balance($sms_cfg);
-	if (!empty($balance['ok']))
-		label_row(_('Current SMS balance'), number_format($balance['balance']));
-	else
-		label_row(_('Current SMS balance'), "<span class='err_msg'>" . htmlspecialchars((string)$balance['message']) . "</span>");
+	echo !empty($balance['ok']) ? '<p class="ma-gw-balance">'.$e(_('SMS balance')).': <strong>'.$e(number_format($balance['balance'])).'</strong></p>'
+		: '<div class="ma-cfg-result bad">'.$e(_('Could not read the SMS balance: ').(string)$balance['message']).'</div>';
 }
-end_table(1);
-submit_center('SAVE_SMS', _('Save SMS Settings'), true, '', 'default');
-end_form();
+echo $save('SAVE_SMS', _('Save SMS settings'));
+echo $test_block(_('Send a test SMS to'), 'sms_test_to', '0712345678', array('SEND_TEST_SMS', _('Send test SMS')), $test_result['sms']);
+echo $card_end;
 
-start_form();
-start_table(TABLESTYLE2, "width='80%'");
-table_section_title(_('Send Test SMS'));
-text_row(_('Phone number'), 'sms_test_to', get_post('sms_test_to'), 20, 20, null, "placeholder='0712345678'");
-comm_show_test_result($test_result['sms']);
-end_table(1);
-submit_center('SEND_TEST_SMS', _('Send Test SMS'), true, '', 'default');
-end_form();
-
-// ================= WhatsApp =================
-$wa_cfg = comm_get_gateway_config('whatsapp');
-
-start_form();
-start_table(TABLESTYLE2, "width='80%'");
-table_section_title(_('WhatsApp Gateway (Meta Cloud API)'));
-label_row('', _('Free-text messages only work as replies within a 24-hour customer-service window. Business-initiated messages outside that window need a pre-approved message template registered in Meta Business Manager - an account-side step done outside this app.'), '', '', 'helphint');
-text_row(_('Phone Number ID'), 'wa_phone_number_id', $wa_cfg ? $wa_cfg['phone_number_id'] : '', 30, 50);
-text_row(_('Business Account ID'), 'wa_business_account_id', $wa_cfg ? $wa_cfg['business_account_id'] : '', 30, 50);
-label_row(_('Access token'), "<input type='password' name='wa_access_token' size='50' maxlength='512' autocomplete='new-password'>");
-label_row('', ($wa_cfg ? sprintf(_('Stored token: %s.'), comm_mask_secret($wa_cfg['access_token'])) . ' ' . _('Leave blank to keep it.') : _('Required on first save.')), '', '', 'helphint');
-end_table(1);
-submit_center('SAVE_WHATSAPP', _('Save WhatsApp Settings'), true, '', 'default');
-end_form();
-
-start_form();
-start_table(TABLESTYLE2, "width='80%'");
-table_section_title(_('Send Test WhatsApp Message'));
-text_row(_('Phone number'), 'wa_test_to', get_post('wa_test_to'), 20, 20, null, "placeholder='0712345678'");
-comm_show_test_result($test_result['whatsapp']);
-end_table(1);
-submit_center('SEND_TEST_WHATSAPP', _('Send Test WhatsApp Message'), true, '', 'default');
-end_form();
-
-// ================= Email (SMTP) =================
+// ---- Email
 $email_cfg = comm_get_gateway_config('email');
 $company_bcc = (string)get_company_pref('bcc_email');
-
-start_form();
-start_table(TABLESTYLE2, "width='80%'");
-table_section_title(_('Email Gateway (SMTP)'));
-text_row(_('SMTP Host'), 'smtp_host', $email_cfg ? $email_cfg['smtp_host'] : '', 40, 255);
-text_row(_('SMTP Port'), 'smtp_port', $email_cfg && $email_cfg['smtp_port'] ? $email_cfg['smtp_port'] : '587', 10, 5);
-array_selector_row(_('Encryption'), 'smtp_encryption',
-	$email_cfg && $email_cfg['smtp_encryption'] ? $email_cfg['smtp_encryption'] : 'tls',
-	array('none' => _('None'), 'ssl' => _('SSL (implicit, e.g. port 465)'), 'tls' => _('STARTTLS (e.g. port 587)')));
-text_row(_('SMTP Username'), 'smtp_username', $email_cfg ? $email_cfg['smtp_username'] : '', 40, 150);
-label_row(_('SMTP Password'), "<input type='password' name='smtp_password' size='40' maxlength='255' autocomplete='new-password'>");
-label_row('', ($email_cfg ? sprintf(_('Stored password: %s.'), comm_mask_secret($email_cfg['smtp_password'])) . ' ' . _('Leave blank to keep it.') : _('Required on first save unless the SMTP server allows unauthenticated relay.')), '', '', 'helphint');
-text_row(_('From Email'), 'smtp_from_email', $email_cfg ? $email_cfg['smtp_from_email'] : '', 40, 150);
-label_row('', _('Leave blank to fall back to the company email address (Setup > Company Preferences).'), '', '', 'helphint');
-text_row(_('From Name'), 'smtp_from_name', $email_cfg ? $email_cfg['smtp_from_name'] : '', 40, 150);
-label_row('', _('Leave blank to fall back to the company name.'), '', '', 'helphint');
+echo $card_start(_('Email (SMTP)'), ($email_cfg && !empty($email_cfg['smtp_host']) ? $pill(_('Configured'), 'paid') : $pill(_('Not configured'), 'late')).' '.$enabled_badge('email'));
+$enc = $email_cfg && $email_cfg['smtp_encryption'] ? $email_cfg['smtp_encryption'] : 'tls';
+$enc_html = '<label>'.$e(_('Encryption')).'<select name="smtp_encryption">';
+foreach (array('none' => _('None'), 'ssl' => _('SSL (implicit, e.g. port 465)'), 'tls' => _('STARTTLS (e.g. port 587)')) as $k => $label)
+	$enc_html .= '<option value="'.$e($k).'"'.($k === $enc ? ' selected' : '').'>'.$e($label).'</option>';
+$enc_html .= '</select></label>';
+echo '<div class="ma-gw-grid">'
+	.$field(_('SMTP host'), 'smtp_host', $email_cfg ? $email_cfg['smtp_host'] : '', array('class' => 'wide'))
+	.$field(_('SMTP port'), 'smtp_port', $email_cfg && $email_cfg['smtp_port'] ? $email_cfg['smtp_port'] : '587', array('max' => 5))
+	.$enc_html
+	.$field(_('SMTP username'), 'smtp_username', $email_cfg ? $email_cfg['smtp_username'] : '', array('max' => 150))
+	.$field(_('SMTP password'), 'smtp_password', '', array('type' => 'password', 'placeholder' => $email_cfg ? _('Leave blank to keep the stored password') : _('Required unless the server allows relay without login')))
+	.$field(_('From email'), 'smtp_from_email', $email_cfg ? $email_cfg['smtp_from_email'] : '', array('max' => 150, 'placeholder' => _('Defaults to the company email')))
+	.$field(_('From name'), 'smtp_from_name', $email_cfg ? $email_cfg['smtp_from_name'] : '', array('max' => 150, 'placeholder' => _('Defaults to the company name')))
+	.'</div>';
+echo $note($email_cfg ? sprintf(_('Stored password: %s.'), comm_mask_secret($email_cfg['smtp_password'])) : _('No password stored yet.'));
 if ($company_bcc !== '')
-	label_row(_('BCC address'), html_specials_encode($company_bcc) . ' ' . _('(from Company Preferences - every outgoing message is copied here).'));
-end_table(1);
-submit_center('SAVE_EMAIL', _('Save SMTP Settings'), true, '', 'default');
-end_form();
+	echo $note(sprintf(_('Every outgoing message is copied to %s (set in Company Preferences).'), $company_bcc));
+echo $save('SAVE_EMAIL', _('Save email settings'));
+echo $test_block(_('Send a test email to'), 'email_test_to', 'name@example.com', array('SEND_TEST_EMAIL', _('Send test email')), $test_result['email']);
+echo $card_end;
 
-start_form();
-start_table(TABLESTYLE2, "width='80%'");
-table_section_title(_('Send Test Email'));
-text_row(_('Email address'), 'email_test_to', get_post('email_test_to'), 40, 150);
-comm_show_test_result($test_result['email']);
-end_table(1);
-submit_center('SEND_TEST_EMAIL', _('Send Test Email'), true, '', 'default');
-end_form();
+// ---- WhatsApp
+$wa_cfg = comm_get_gateway_config('whatsapp');
+echo $card_start(_('WhatsApp (Meta Cloud API)'), ($wa_cfg && !empty($wa_cfg['access_token']) ? $pill(_('Configured'), 'paid') : $pill(_('Not configured'), 'late')).' '.$enabled_badge('whatsapp'));
+echo '<div class="ma-gw-grid">'
+	.$field(_('Phone Number ID'), 'wa_phone_number_id', $wa_cfg ? $wa_cfg['phone_number_id'] : '', array('max' => 50))
+	.$field(_('Business Account ID'), 'wa_business_account_id', $wa_cfg ? $wa_cfg['business_account_id'] : '', array('max' => 50))
+	.$field(_('Access token'), 'wa_access_token', '', array('type' => 'password', 'max' => 512, 'class' => 'wide', 'placeholder' => $wa_cfg ? _('Leave blank to keep the stored token') : _('Required on first save')))
+	.'</div>';
+echo $note($wa_cfg ? sprintf(_('Stored token: %s.'), comm_mask_secret($wa_cfg['access_token'])) : _('No access token stored yet.'));
+echo $note(_('Free-text messages only work as replies within a 24-hour customer-service window. Business-initiated messages outside that window need a message template approved in Meta Business Manager, which is set up outside this app.'));
+echo $save('SAVE_WHATSAPP', _('Save WhatsApp settings'));
+echo $test_block(_('Send a test message to'), 'wa_test_to', '0712345678', array('SEND_TEST_WHATSAPP', _('Send test message')), $test_result['whatsapp']);
+echo $card_end;
+echo '</div>';
 
 end_page();

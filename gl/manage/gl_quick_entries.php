@@ -186,7 +186,8 @@ if ($Mode2 == 'RESET2')
 
 $result = get_quick_entries();
 start_form();
-start_table(TABLESTYLE);
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_("Description"), _("Type"), _("Usage"),  "", "");
 table_header($th);
 
@@ -207,6 +208,8 @@ end_table(1);
 //-----------------------------------------------------------------------------------
 
 div_start('qe');
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 if ($selected_id != -1) 
@@ -254,6 +257,7 @@ else
 }
 end_table(1);
 submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New Quick Entry') : _('Edit Quick Entry'), $modal_open);
 div_end();
 
 

@@ -98,7 +98,8 @@ if ($Mode == 'RESET')
 $result = get_all_sales_types(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE, "width='30%'");
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 
 $th = array (_('Type Name'), _('Factor'), _('Tax Incl'), '','');
 inactive_control_column($th);
@@ -134,6 +135,8 @@ display_note(_("Marked sales type is the company base pricelist for prices calcu
  if (!isset($_POST['base']))
 	$_POST['base'] = 0;
 
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 if ($selected_id != -1)
@@ -158,6 +161,7 @@ check_row(_("Tax included").':', 'tax_included', $_POST['tax_included']);
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New Sales Type') : _('Edit Sales Type'), $modal_open);
 
 end_form();
 

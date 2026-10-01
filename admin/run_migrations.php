@@ -86,13 +86,31 @@ submit_center_last('force_run_migrations', _('Force Re-run All'),
     _('Ignores the ledger and re-executes every migration, including ones already applied.'), false);
 end_form();
 
+// Status of every migration as last recorded (history only; not a schema check).
+start_table(TABLESTYLE);
+table_header(array(_('Migration'), _('Last status'), _('Last run')));
+foreach ($jobs as $name=>$job) {
+    $row = $log[$name] ?? null;
+    start_row();
+    label_cell(html_specials_encode($name));
+    label_cell($row ? ($row['status'] === 'ok' ? _('Applied') : _('Failed')) : _('Not applied'));
+    label_cell($row ? html_specials_encode($row['ran_at']) : '');
+    end_row();
+}
+end_table(1);
+
 if ($results !== null) {
     $failed = 0;
     foreach ($results as $r) if ($r['status'] === 'failed') $failed++;
     if ($failed)
         display_error(sprintf(_('%d of %d migrations failed. See details below.'), $failed, count($results)));
-    else
+    else {
         display_notification(sprintf(_('%d migrations processed successfully (see status below for what actually ran).'), count($results)));
+        // The menu and your role's rights are cached when you sign in. Rebuild the
+        // menu now; new rights (and any newly enabled module) need a fresh sign-in.
+        unset($_SESSION['App']);
+        display_note(_('Sign out and sign in again to see new menus and rights, such as Communications, System Audit Trail and eTIMS.'));
+    }
 
     $labels = array('ok'=>_('OK'), 'failed'=>_('Failed'), 'skipped'=>_('Skipped'));
     start_table(TABLESTYLE);

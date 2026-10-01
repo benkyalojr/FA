@@ -23,39 +23,52 @@ function etims_fmt_dt($s)
 
 // Merely opening an inquiry never waits for the provider. Pagination and
 // refresh explicitly request current data; no cached fiscal totals are shown.
+function etims_live_bar($button_html, $note)
+{
+	echo '<section class="ma-live-bar"><div class="ma-live-text"><strong>' . _('Live data') . '</strong><span>' . $note . '</span></div>'
+		. $button_html . '</section>';
+}
+
 function etims_remote_load_requested($page = 1)
 {
-	display_note(_('Live data is fetched from the eTIMS provider only when requested. Loading may take up to 30 seconds per request (login may require another request).'));
-	echo "<center><a href='?load=1&amp;page=" . max(1, (int)$page) . "'>"
-		. _('Load / refresh live data') . "</a></center><br>";
-	return isset($_GET['load']) && $_GET['load'] === '1';
+	$loaded = isset($_GET['load']) && $_GET['load'] === '1';
+	etims_live_bar("<a class='ma-sales-new' id='ma-live-load' href='?load=1&amp;page=" . max(1, (int)$page) . "'>"
+		. ($loaded ? _('Refresh live data') : _('Load live data')) . "</a>",
+		_('Fetched from the eTIMS provider only when you ask. Loading may take up to 30 seconds per request (login may need another request).'));
+	echo "<script>(function(){var b=document.getElementById('ma-live-load');if(!b)return;b.addEventListener('click',function(){"
+		. "b.textContent=" . json_encode(_('Contacting eTIMS...')) . ";b.setAttribute('aria-busy','true');b.style.pointerEvents='none';b.style.opacity='.7';});})();</script>";
+	if (!$loaded)
+		echo "<div class='ma-empty'><strong>" . _('Nothing loaded yet') . "</strong><p>"
+			. _('Press Load live data to fetch the current records from the eTIMS provider.') . "</p></div>";
+	return $loaded;
 }
 
 // Shift previews use POST, separately from the confirmed Close Day action.
 function etims_shift_preview_requested()
 {
-	display_note(_('Load the current shift from the eTIMS provider when needed. Opening this page does not contact the provider.'));
 	start_form();
-	submit_center('LOAD_SHIFT', _('Load / refresh current shift'));
+	etims_live_bar("<button class='ma-sales-new' type='submit' name='LOAD_SHIFT' value='1'>" . _('Load / refresh current shift') . "</button>",
+		_('Loads the current shift from the eTIMS provider when needed. Opening this page does not contact the provider.'));
 	end_form();
 	return isset($_POST['LOAD_SHIFT']) && !isset($_POST['CONFIRM_CLOSE']);
 }
 
 function etims_remote_pager_nav($page, $total_pages, $total)
 {
-	echo "<center>";
-	echo sprintf(_('Page %d of %d (%d total)'), $page, max((int)$total_pages, 1), (int)$total);
-	echo "&nbsp;&nbsp;";
+	$total_pages = max((int)$total_pages, 1);
+	echo "<nav class='ma-live-pager' aria-label='" . _('Pages') . "'><span>"
+		. sprintf(_('Page %d of %d - %d total'), $page, $total_pages, (int)$total) . "</span><span class='ma-live-pager-links'>";
 	if ($page > 1)
-		echo "<a href='?load=1&amp;page=" . ($page - 1) . "'>&laquo; " . _('Previous') . "</a>&nbsp;&nbsp;";
+		echo "<a class='ma-cfg-secondary' href='?load=1&amp;page=" . ($page - 1) . "'>&lsaquo; " . _('Previous') . "</a>";
 	if ($page < $total_pages)
-		echo "<a href='?load=1&amp;page=" . ($page + 1) . "'>" . _('Next') . " &raquo;</a>";
-	echo "</center>";
+		echo "<a class='ma-cfg-secondary' href='?load=1&amp;page=" . ($page + 1) . "'>" . _('Next') . " &rsaquo;</a>";
+	echo "</span></nav>";
 }
 
 function etims_status_cell($status)
 {
+	$text = html_specials_encode((string)$status);
 	if ($status === 'active')
-		return "<span style='color: green;'>" . html_specials_encode($status) . "</span>";
-	return html_specials_encode((string)$status);
+		return "<span class='ma-pill paid'>" . $text . "</span>";
+	return $text === '' ? '' : "<span class='ma-pill pending'>" . $text . "</span>";
 }

@@ -27,8 +27,15 @@ if (user_use_date_picker())
 
 page(_($help_context = "Trial Balance"), false, false, "", $js);
 
-$k = 0;
-$pdeb = $pcre = $cdeb = $ccre = $tdeb = $tcre = $pbal = $cbal = $tbal = 0;
+// First visit: the current fiscal year to date, hiding accounts with no activity.
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+	$fy = get_current_fiscalyear();
+	if (!isset($_POST['TransFromDate']))
+		$_POST['TransFromDate'] = sql2date($fy['begin']);
+	if (!isset($_POST['TransToDate']))
+		$_POST['TransToDate'] = today();
+	$_POST['NoZero'] = 1;
+}
 
 //----------------------------------------------------------------------------------------------------
 // Ajax updates
@@ -38,47 +45,51 @@ if (get_post('Show'))
 	$Ajax->activate('balance_tbl');
 }
 
-
 function gl_inquiry_controls()
 {
 	$dim = get_company_pref('use_dimension');
-    start_form();
+	start_form();
 
-    start_table(TABLESTYLE_NOBORDER);
-
-	$date = today();
-	if (!isset($_POST['TransToDate']))
-		$_POST['TransToDate'] = end_month($date);
-	if (!isset($_POST['TransFromDate']))
-		$_POST['TransFromDate'] = add_days(end_month($date), -user_transaction_days());
-	start_row();	
-    date_cells(_("From:"), 'TransFromDate');
-	date_cells(_("To:"), 'TransToDate');
+	ma_sales_filter_start();
+	ma_sales_field(_('Date'), function() {
+		date_cells(null, 'TransFromDate');
+		date_cells(null, 'TransToDate');
+	});
 	if ($dim >= 1)
-		dimensions_list_cells(_("Dimension")." 1:", 'Dimension', null, true, " ", false, 1);
+		ma_sales_field(_('Dimension').' 1', function() { dimensions_list_cells(null, 'Dimension', null, true, " ", false, 1); });
 	if ($dim > 1)
-		dimensions_list_cells(_("Dimension")." 2:", 'Dimension2', null, true, " ", false, 2);
-	check_cells(_("No zero values"), 'NoZero', null);
-	check_cells(_("Only balances"), 'Balance', null);
-	check_cells(_("Group totals only"), 'GroupTotalOnly', null);
-	submit_cells('Show',_("Show"),'','', 'default');
-	end_row();
-    end_table();
-    end_form();
+		ma_sales_field(_('Dimension').' 2', function() { dimensions_list_cells(null, 'Dimension2', null, true, " ", false, 2); });
+	ma_sales_field('', function() { check_cells(_("No zero values"), 'NoZero', null); }, 'ma-sales-check');
+	ma_sales_field('', function() { check_cells(_("Only balances"), 'Balance', null); }, 'ma-sales-check');
+	ma_sales_field('', function() { check_cells(_("Group totals only"), 'GroupTotalOnly', null); }, 'ma-sales-check');
+	ma_sales_filter_end('Show', _('Show'), null, _('Show'));
+	end_form();
 }
 
 //----------------------------------------------------------------------------------------------------
+// Rendering helpers: same figures as FA's get_balance(), laid out as cards.
+
+function ma_tb_amount($value, $class = '')
+{
+	$value = round2($value, user_price_dec());
+	return '<td class="num '.$class.($value == 0 ? ' zero' : '').'">'.number_format2($value, user_price_dec()).'</td>';
+}
+
+// A debit/credit pair for a net balance, as display_debit_or_credit_cells() does.
+function ma_tb_balance_pair($value, $class = '')
+{
+	$value = round2($value, user_price_dec());
+	return $value >= 0 ? ma_tb_amount($value, $class).ma_tb_amount(0, $class) : ma_tb_amount(0, $class).ma_tb_amount(abs($value), $class);
+}
 
 function display_trial_balance($type, $typename)
 {
-	global $path_to_root, $SysPrefs,
-		 $k, $pdeb, $pcre, $cdeb, $ccre, $tdeb, $tcre, $pbal, $cbal, $tbal;
+	global $path_to_root, $SysPrefs, $ma_tb;
 
-	$printtitle = 0; //Flag for printing type name
+	$printtitle = 0; // flag for printing the group name
+	$group_only = check_value('GroupTotalOnly');
+	$balances = check_value('Balance');
 
-	$k = 0;
-
-	//Get Accounts directly under this group/type
 	$accounts = get_gl_accounts(null, null, $type);
 
 	$begin = get_fiscalyear_begin_for_date($_POST['TransFromDate']);
@@ -86,32 +97,18 @@ function display_trial_balance($type, $typename)
 		$begin = $_POST['TransFromDate'];
 	$begin = add_days($begin, -1);
 
-	$Apdeb=$pdeb;
-	$Apcre=$pcre;
-	$Acdeb=$cdeb;
-	$Accre=$ccre;
-	$Atdeb=$tdeb;
-	$Atcre=$tcre;
-	$Apbal=$pbal;
-	$Acbal=$cbal;
-	$Atbal=$tbal;
+	$before = $ma_tb; // totals before this group, to derive its own subtotal
 
 	while ($account = db_fetch($accounts))
 	{
-		//Print Type Title if it has atleast one non-zero account
 		if (!$printtitle)
 		{
-			if (!check_value('GroupTotalOnly'))
-			{
-				start_row("class='inquirybg' style='font-weight:bold'");
-				label_cell(_("Group")." - ".$type ." - ".$typename, "colspan=8");
-				end_row();
-			}
+			if (!$group_only)
+				echo '<tr class="ma-tb-group"><td colspan="8">'.ma_ui_escape(_("Group")).' &middot; '.ma_ui_escape($type).' &middot; '.ma_ui_escape($typename).'</td></tr>';
 			$printtitle = 1;
 		}
 
-		// FA doesn't really clear the closed year, therefore the brought forward balance includes all the transactions from the past, even though the balance is null.
-		// If we want to remove the balanced part for the past years, this option removes the common part from from the prev and tot figures.
+		// FA doesn't clear closed years, so brought-forward balances include the past.
 		if (@$SysPrefs->clear_trial_balance_opening)
 		{
 			$open = get_balance($account["account_code"], $_POST['Dimension'], $_POST['Dimension2'], $begin,  $begin, false, true);
@@ -124,90 +121,75 @@ function display_trial_balance($type, $typename)
 		$tot = get_balance($account["account_code"], $_POST['Dimension'], $_POST['Dimension2'], $begin, $_POST['TransToDate'], false, true);
 		if (check_value("NoZero") && !$prev['balance'] && !$curr['balance'] && !$tot['balance'])
 			continue;
-		if (!check_value('GroupTotalOnly'))
+		if (!$group_only)
 		{
-			alt_table_row_color($k);
-
-			$url = "<a href='$path_to_root/gl/inquiry/gl_account_inquiry.php?TransFromDate=" . $_POST["TransFromDate"] . "&TransToDate=" . $_POST["TransToDate"] . "&account=" . $account["account_code"] . "&Dimension=" . $_POST["Dimension"] . "&Dimension2=" . $_POST["Dimension2"] . "'>" . $account["account_code"] . "</a>";
-
-			label_cell($url);
-			label_cell($account["account_name"]);
+			$url = "<a class='ma-tb-account' href='$path_to_root/gl/inquiry/gl_account_inquiry.php?TransFromDate=" . urlencode($_POST["TransFromDate"])
+				. "&TransToDate=" . urlencode($_POST["TransToDate"]) . "&account=" . urlencode($account["account_code"])
+				. "&Dimension=" . urlencode($_POST["Dimension"]) . "&Dimension2=" . urlencode($_POST["Dimension2"]) . "'>"
+				. ma_ui_escape($account["account_code"]) . "</a>";
+			echo '<tr class="ma-tb-data"><td>'.$url.'</td><td>'.ma_ui_escape($account["account_name"]).'</td>';
+			if ($balances)
+				echo ma_tb_balance_pair($prev['balance']).ma_tb_balance_pair($curr['balance']).ma_tb_balance_pair($tot['balance'], 'ma-tb-bal');
+			else
+				echo ma_tb_amount($prev['debit']-$offset).ma_tb_amount($prev['credit']-$offset)
+					.ma_tb_amount($curr['debit']).ma_tb_amount($curr['credit'])
+					.ma_tb_amount($tot['debit']-$offset, 'ma-tb-bal').ma_tb_amount($tot['credit']-$offset, 'ma-tb-bal');
+			echo '</tr>';
+			$ma_tb['accounts']++;
 		}
-		if (check_value('Balance'))
+		if (!$balances)
 		{
-			if (!check_value('GroupTotalOnly'))
-			{
-				display_debit_or_credit_cells($prev['balance']);
-				display_debit_or_credit_cells($curr['balance']);
-				display_debit_or_credit_cells($tot['balance']);
-			}
+			$ma_tb['pdeb'] += $prev['debit'];
+			$ma_tb['pcre'] += $prev['credit'];
+			$ma_tb['cdeb'] += $curr['debit'];
+			$ma_tb['ccre'] += $curr['credit'];
+			$ma_tb['tdeb'] += $tot['debit'];
+			$ma_tb['tcre'] += $tot['credit'];
 		}
-		else
-		{
-			if (!check_value('GroupTotalOnly'))
-			{
-				amount_cell($prev['debit']-$offset);
-				amount_cell($prev['credit']-$offset);
-				amount_cell($curr['debit']);
-				amount_cell($curr['credit']);
-				amount_cell($tot['debit']-$offset);
-				amount_cell($tot['credit']-$offset);
-			}
-			$pdeb += $prev['debit'];
-			$pcre += $prev['credit'];
-			$cdeb += $curr['debit'];
-			$ccre += $curr['credit'];
-			$tdeb += $tot['debit'];
-			$tcre += $tot['credit'];
-		}
-		$pbal += $prev['balance'];
-		$cbal += $curr['balance'];
-		$tbal += $tot['balance'];
-		end_row();
+		$ma_tb['pbal'] += $prev['balance'];
+		$ma_tb['cbal'] += $curr['balance'];
+		$ma_tb['tbal'] += $tot['balance'];
 	}
 
-	//Get Account groups/types under this group/type
+	// Account groups under this group.
 	$result = get_account_types(false, false, $type);
-	while ($accounttype=db_fetch($result))
+	while ($accounttype = db_fetch($result))
 	{
-		//Print Type Title if has sub types and not previously printed
 		if (!$printtitle)
 		{
-			start_row("class='inquirybg' style='font-weight:bold'");
-			label_cell(_("Group")." - ".$type ." - ".$typename, "colspan=8");
-			end_row();
+			echo '<tr class="ma-tb-group"><td colspan="8">'.ma_ui_escape(_("Group")).' &middot; '.ma_ui_escape($type).' &middot; '.ma_ui_escape($typename).'</td></tr>';
 			$printtitle = 1;
-
 		}
 		display_trial_balance($accounttype["id"], $accounttype["name"].' ('.$typename.')');
 	}
 
-	start_row("class='inquirybg' style='font-weight:bold'");
-	if (!check_value('GroupTotalOnly'))
-		label_cell(_("Total") ." - ".$typename, "colspan=2");
+	// Group subtotal, for groups that have accounts or sub-groups.
+	if (!$printtitle)
+		return;
+	echo '<tr class="ma-tb-subtotal"><td colspan="2">'.ma_ui_escape(_("Total")).' &middot; '.ma_ui_escape($typename).'</td>';
+	if (!$balances)
+		echo ma_tb_amount($ma_tb['pdeb'] - $before['pdeb']).ma_tb_amount($ma_tb['pcre'] - $before['pcre'])
+			.ma_tb_amount($ma_tb['cdeb'] - $before['cdeb']).ma_tb_amount($ma_tb['ccre'] - $before['ccre'])
+			.ma_tb_amount($ma_tb['tdeb'] - $before['tdeb'], 'ma-tb-bal').ma_tb_amount($ma_tb['tcre'] - $before['tcre'], 'ma-tb-bal');
 	else
-		label_cell(" - ".$typename, "colspan=2");
+		echo ma_tb_balance_pair($ma_tb['pbal'] - $before['pbal']).ma_tb_balance_pair($ma_tb['cbal'] - $before['cbal'])
+			.ma_tb_balance_pair($ma_tb['tbal'] - $before['tbal'], 'ma-tb-bal');
+	echo '</tr>';
+}
 
-
-	if (!check_value('Balance'))
-	{
-		amount_cell($pdeb-$Apdeb );
-		amount_cell($pcre-$Apcre);
-		amount_cell($cdeb-$Acdeb );
-		amount_cell($ccre-$Accre );
-		amount_cell($tdeb-$Atdeb );
-		amount_cell($tcre-$Atcre);
-	}
-	else
-	{
-		display_debit_or_credit_cells($pbal-$Apbal);
-		display_debit_or_credit_cells($cbal-$Acbal );
-		display_debit_or_credit_cells($tbal-$Atbal);
-	}
-	end_row();
+function ma_tb_table_header()
+{
+	return '<thead><tr class="ma-tb-band"><th rowspan="2" class="l">'.ma_ui_escape(_("Account")).'</th><th rowspan="2" class="l">'.ma_ui_escape(_("Account Name")).'</th>'
+		.'<th colspan="2">'.ma_ui_escape(_("Brought Forward")).'</th><th colspan="2">'.ma_ui_escape(_("This Period")).'</th><th colspan="2" class="ma-tb-bal">'
+		.ma_ui_escape(_("Balance")).'</th></tr><tr class="ma-tb-sub">'
+		.str_repeat('<th class="num">'.ma_ui_escape(_("Debit")).'</th><th class="num">'.ma_ui_escape(_("Credit")).'</th>', 3).'</tr></thead>';
 }
 
 //----------------------------------------------------------------------------------------------------
+
+echo '<div class="ma-tb-intro"><p>'.ma_ui_escape(_('Account movements and balances at a glance')).'</p><div><span class="ma-tb-tag">'
+	.ma_ui_escape(get_company_pref('curr_default')).'</span><button type="button" class="ma-tb-print" onclick="window.print()">'
+	.ma_ui_icon('file').' '.ma_ui_escape(_('Print / PDF')).'</button></div></div>';
 
 gl_inquiry_controls();
 
@@ -226,66 +208,42 @@ if (!isset($_POST['Dimension']))
 	$_POST['Dimension'] = 0;
 if (!isset($_POST['Dimension2']))
 	$_POST['Dimension2'] = 0;
-start_table(TABLESTYLE);
-$tableheader =  "<tr>
-	<td rowspan=2 class='tableheader'>" . _("Account") . "</td>
-	<td rowspan=2 class='tableheader'>" . _("Account Name") . "</td>
-	<td colspan=2 class='tableheader'>" . _("Brought Forward") . "</td>
-	<td colspan=2 class='tableheader'>" . _("This Period") . "</td>
-	<td colspan=2 class='tableheader'>" . _("Balance") . "</td>
-	</tr><tr>
-	<td class='tableheader'>" . _("Debit") . "</td>
-	<td class='tableheader'>" . _("Credit") . "</td>
-	<td class='tableheader'>" . _("Debit") . "</td>
-	<td class='tableheader'>" . _("Credit") . "</td>
-	<td class='tableheader'>" . _("Debit") . "</td>
-	<td class='tableheader'>" . _("Credit") . "</td>
-	</tr>";
 
-echo $tableheader;
-
-//display_trial_balance();
+$ma_tb = array('pdeb'=>0, 'pcre'=>0, 'cdeb'=>0, 'ccre'=>0, 'tdeb'=>0, 'tcre'=>0, 'pbal'=>0, 'cbal'=>0, 'tbal'=>0, 'accounts'=>0);
+$cur = get_company_pref('curr_default');
 
 $classresult = get_account_classes(false);
 while ($class = db_fetch($classresult))
 {
-	start_row("class='inquirybg' style='font-weight:bold'");
-	label_cell(_("Class")." - ".$class['cid'] ." - ".$class['class_name'], "colspan=8");
-	end_row();
-
-	//Get Account groups/types under this group/type with no parents
+	ob_start();
+	$ma_tb['accounts'] = 0;
+	// Account groups with no parent group, within this class.
 	$typeresult = get_account_types(false, $class['cid'], -1);
-	while ($accounttype=db_fetch($typeresult))
-	{
+	while ($accounttype = db_fetch($typeresult))
 		display_trial_balance($accounttype["id"], $accounttype["name"]);
-	}
+	$rows = ob_get_clean();
+	if (trim($rows) === '')
+		continue; // nothing to show for this class
+	echo '<section class="ma-tb-card"><div class="ma-tb-title"><h2>'.ma_ui_escape($class['class_name']).'</h2><span>'
+		.ma_ui_escape(_('Account balances')).' &middot; '.ma_ui_escape($cur).'</span></div><div class="ma-table-wrap"><table class="ma-tb-table">'
+		.ma_tb_table_header().'<tbody>'.$rows.'</tbody></table></div><div class="ma-tb-footer"><span>'
+		.ma_ui_escape(sprintf(_('%d accounts'), $ma_tb['accounts'])).'</span><span>'.ma_ui_escape(_('Debit and credit amounts')).'</span></div></section>';
 }
 
+// Grand totals across every class.
+echo '<section class="ma-tb-card ma-tb-totals"><div class="ma-table-wrap"><table class="ma-tb-table">'.ma_tb_table_header().'<tbody>';
 if (!check_value('Balance'))
-{
-	start_row("class='inquirybg' style='font-weight:bold'");
-	label_cell(_("Total") ." - ".$_POST['TransToDate'], "colspan=2");
-	amount_cell($pdeb);
-	amount_cell($pcre);
-	amount_cell($cdeb);
-	amount_cell($ccre);
-	amount_cell($tdeb);
-	amount_cell($tcre);
-	end_row();
-}
-start_row("class='inquirybg' style='font-weight:bold'");
-label_cell(_("Ending Balance") ." - ".$_POST['TransToDate'], "colspan=2");
-display_debit_or_credit_cells($pbal);
-display_debit_or_credit_cells($cbal);
-display_debit_or_credit_cells($tbal);
-end_row();
+	echo '<tr class="ma-tb-subtotal"><td colspan="2">'.ma_ui_escape(_("Total").' - '.$_POST['TransToDate']).'</td>'
+		.ma_tb_amount($ma_tb['pdeb']).ma_tb_amount($ma_tb['pcre']).ma_tb_amount($ma_tb['cdeb']).ma_tb_amount($ma_tb['ccre'])
+		.ma_tb_amount($ma_tb['tdeb'], 'ma-tb-bal').ma_tb_amount($ma_tb['tcre'], 'ma-tb-bal').'</tr>';
+echo '<tr class="ma-tb-ending"><td colspan="2">'.ma_ui_escape(_("Ending Balance").' - '.$_POST['TransToDate']).'</td>'
+	.ma_tb_balance_pair($ma_tb['pbal']).ma_tb_balance_pair($ma_tb['cbal']).ma_tb_balance_pair($ma_tb['tbal'], 'ma-tb-bal').'</tr>';
+echo '</tbody></table></div></section>';
 
-end_table(1);
-if (($pbal = round2($pbal, user_price_dec())) != 0 && $_POST['Dimension'] == 0 && $_POST['Dimension2'] == 0)
+if (($pbal = round2($ma_tb['pbal'], user_price_dec())) != 0 && $_POST['Dimension'] == 0 && $_POST['Dimension2'] == 0)
 	display_warning(_("The Opening Balance is not in balance, probably due to a non closed Previous Fiscalyear."));
 div_end();
 
 //----------------------------------------------------------------------------------------------------
 
 end_page();
-

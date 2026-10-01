@@ -28,6 +28,8 @@ include_once($path_to_root . "/includes/ui/attachment.inc");
 
 check_db_has_tax_groups(_("There are no tax groups defined in the system. At least one tax group is required before proceeding."));
 
+if (isset($_GET['_tabs_sel']) && is_string($_GET['_tabs_sel']) && !isset($_POST['_tabs_sel']))
+	$_POST['_tabs_sel'] = $_GET['_tabs_sel'];
 if (isset($_GET['supplier_id'])) 
 {
 	$_POST['supplier_id'] = $_GET['supplier_id'];

@@ -123,7 +123,8 @@ if ($Mode == 'RESET')
 $result = get_payment_terms_all(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE);
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_("Description"), _("Type"), _("Due After/Days"), "", "");
 inactive_control_column($th);
 table_header($th);
@@ -155,6 +156,8 @@ if (list_updated('type')) {
 
 div_start('edits');
 
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 $day_in_following_month = $days_before_due = 0;
@@ -184,6 +187,7 @@ end_table(1);
 div_end();
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New Payment Term') : _('Edit Payment Term'), $modal_open);
 
 end_form();
 

@@ -26,12 +26,6 @@ class setup_app extends application
 			"admin/display_prefs.php?", 'SA_SETUPDISPLAY', MENU_SETTINGS);
 		$this->add_lapp_function(0, _("Transaction &References"),
 			"admin/forms_setup.php?", 'SA_FORMSETUP', MENU_SETTINGS);
-		$this->add_rapp_function(0, _("&Taxes"),
-			"taxes/tax_types.php?", 'SA_TAXRATES', MENU_MAINTENANCE);
-		$this->add_rapp_function(0, _("Tax &Groups"),
-			"taxes/tax_groups.php?", 'SA_TAXGROUPS', MENU_MAINTENANCE);
-		$this->add_rapp_function(0, _("Item Ta&x Types"),
-			"taxes/item_tax_types.php?", 'SA_ITEMTAXTYPE', MENU_MAINTENANCE);
 		$this->add_rapp_function(0, _("System and &General GL Setup"),
 			"admin/gl_setup.php?", 'SA_GLSETUP', MENU_SETTINGS);
 		$this->add_rapp_function(0, _("&Fiscal Years"),
@@ -81,24 +75,6 @@ class setup_app extends application
 			"admin/run_migrations.php", 'SA_RUNMIGRATIONS', MENU_UPDATE);
 		$this->add_rapp_function(2, _("Software &Upgrade"),
 			"admin/inst_upgrade.php?", 'SA_SOFTWAREUPGRADE', MENU_UPDATE);
-
-		$this->add_module(_("eTIMS Integration"));
-		$this->add_lapp_function(3, _("eTIMS &Configuration"),
-			"etims/manage/etims_config.php?", 'SA_ETIMSSETUP', MENU_SETTINGS);
-		$this->add_lapp_function(3, _("eTIMS &Item Mapping"),
-			"etims/manage/etims_item_mapping.php?", 'SA_ETIMSITEMS', MENU_MAINTENANCE);
-		$this->add_lapp_function(3, _("eTIMS &X Report"),
-			"etims/manage/etims_x_report.php?", 'SA_ETIMSXREPORT', MENU_INQUIRY);
-		$this->add_lapp_function(3, _("eTIMS &Z Report (Close Day)"),
-			"etims/manage/etims_z_report.php?", 'SA_ETIMSZREPORT', MENU_MAINTENANCE);
-		$this->add_rapp_function(3, _("eTIMS &Submissions"),
-			"etims/inquiry/etims_submissions.php?", 'SA_ETIMSVIEW', MENU_INQUIRY);
-		$this->add_rapp_function(3, _("eTIMS &Products"),
-			"etims/inquiry/etims_products.php?", 'SA_ETIMSVIEW', MENU_INQUIRY);
-		$this->add_rapp_function(3, _("eTIMS S&ales"),
-			"etims/inquiry/etims_sales.php?", 'SA_ETIMSVIEW', MENU_INQUIRY);
-		$this->add_rapp_function(3, _("eTIMS &Credit Notes"),
-			"etims/inquiry/etims_credit_notes.php?", 'SA_ETIMSVIEW', MENU_INQUIRY);
 
 		$this->add_extensions();
 	}

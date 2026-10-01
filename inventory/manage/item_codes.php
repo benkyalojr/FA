@@ -12,6 +12,7 @@
 $page_security = 'SA_FORITEMCODE';
 $path_to_root = "../..";
 include_once($path_to_root . "/includes/session.inc");
+include_once($path_to_root . "/ui/inventory.inc");
 
 $js = "";
 if ($SysPrefs->use_popup_windows && $SysPrefs->use_popup_search)
@@ -110,6 +111,7 @@ echo "<center>" . _("Item:"). "&nbsp;";
 echo stock_items_list('stock_id', $_POST['stock_id'], false, true);
 
 echo "<hr></center>";
+ma_new_bar();
 
 set_global_stock_item($_POST['stock_id']);
 
@@ -177,6 +179,8 @@ if ($selected_id != '') {
 }
 
 echo "<br>";
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 hidden('code_id', $selected_id);
@@ -189,6 +193,7 @@ stock_categories_list_row(_("Category:"), 'category_id', null);
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New Item Code') : _('Edit Item Code'), $modal_open);
 
 end_form();
 end_page();

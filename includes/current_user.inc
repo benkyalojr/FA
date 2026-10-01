@@ -225,6 +225,13 @@ class current_user
 
 		$code = $security_areas[$sec_area][0];
 
+		// Site administrators (those who may install modules) can always run the
+		// database migrations: the dedicated right only exists after migrating.
+		if ($sec_area === 'SA_RUNMIGRATIONS' && !in_array($code, $this->role_set)
+			&& $this->company == 0 && isset($security_areas['SA_CREATEMODULES'])
+			&& in_array($security_areas['SA_CREATEMODULES'][0], $this->role_set))
+			return true;
+
 		// only first registered company has site admin privileges
 		return $code && in_array($code, $this->role_set)
 			&& ($this->company == 0 || (($code&~0xff) != SS_SADMIN));

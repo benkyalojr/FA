@@ -57,27 +57,17 @@ if (get_post('SearchOrders'))
 
 start_form();
 
-start_table(TABLESTYLE_NOBORDER);
-start_row();
-ref_cells(_("#:"), 'order_number', '',null, '', true);
-
-date_cells(_("from:"), 'OrdersAfterDate', '', null, -user_transaction_days());
-date_cells(_("to:"), 'OrdersToDate');
-
-locations_list_cells(_("Location:"), 'StockLocation', null, true);
-end_row();
-end_table();
-
-start_table(TABLESTYLE_NOBORDER);
-start_row();
-
-stock_items_list_cells(_("Item:"), 'SelectStockFromList', null, true);
-
-supplier_list_cells(_("Select a supplier: "), 'supplier_id', null, true, true);
-
-submit_cells('SearchOrders', _("Search"),'',_('Select documents'), 'default');
-end_row();
-end_table(1);
+ma_sales_filter_start();
+ma_sales_field(_('#'), function() { ref_cells(null, 'order_number', '', null, '', true); });
+ma_sales_field(_('Date'), function() {
+	date_cells(null, 'OrdersAfterDate', '', null, -user_transaction_days());
+	date_cells(null, 'OrdersToDate');
+});
+ma_sales_field(_('Location'), function() { locations_list_cells(null, 'StockLocation', null, true); });
+ma_sales_field(_('Item'), function() { stock_items_list_cells(null, 'SelectStockFromList', null, true); });
+ma_sales_field(_('Supplier'), function() { supplier_list_cells(null, 'supplier_id', null, true, true); });
+ma_sales_filter_end('SearchOrders', _('Select documents'), ma_purchases_new_action('receiving'));
+echo '<br>';
 //---------------------------------------------------------------------------------------------
 function trans_view($trans)
 {

@@ -95,7 +95,8 @@ if ($Mode == 'RESET')
 $result = get_salesmen(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE, "width='60%'");
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_("Name"), _("Phone"), _("Fax"), _("Email"), _("Provision"), _("Break Pt."), _("Provision")." 2", "", "");
 inactive_control_column($th);
 table_header($th);
@@ -150,6 +151,8 @@ if ($selected_id != -1)
 	$_POST['provision2'] = percent_format(0);	
 }
 
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 text_row_ex(_("Sales person name:"), 'salesman_name', 30);
@@ -162,6 +165,7 @@ percent_row(_("Provision")." 2:", 'provision2');
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New Sales Person') : _('Edit Sales Person'), $modal_open);
 
 end_form();
 

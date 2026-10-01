@@ -135,7 +135,7 @@ function display_currencies()
 	$company_currency = get_company_currency();
 	
     $result = get_currencies(check_value('show_inactive'));
-    start_table(TABLESTYLE);
+    start_table(TABLESTYLE, "width='100%'");
     $th = array(_("Abbreviation"), _("Symbol"), _("Currency Name"),
     	_("Hundredths name"), _("Country"), _("Auto update"), "", "");
 	inactive_control_column($th);
@@ -181,7 +181,9 @@ function display_currency_edit($selected_id)
 {
 	global $Mode;
 	
-	start_table(TABLESTYLE2);
+	$modal_open = isset($_GET['new']) || $selected_id != "" || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
+start_table(TABLESTYLE2);
 
 	if ($selected_id != '') 
 	{
@@ -214,6 +216,7 @@ function display_currency_edit($selected_id)
 	end_table(1);
 
 	submit_add_or_update_center($selected_id == '', '', 'both');
+ma_modal_end($selected_id == "" ? _('New Currency') : _('Edit Currency'), $modal_open);
 }
 
 //---------------------------------------------------------------------------------------------
@@ -236,6 +239,7 @@ if ($Mode == 'RESET')
 }
 
 start_form();
+ma_settings_new_bar(_('Add New'));
 display_currencies();
 
 display_currency_edit($selected_id);

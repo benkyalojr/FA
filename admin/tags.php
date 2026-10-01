@@ -124,7 +124,8 @@ if ($Mode == 'RESET')
 $result = get_tags($_POST['type'], check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE);
+ma_settings_new_bar(_('Add New'), array('type'));
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_("Tag Name"), _("Tag Description"), "", "");
 inactive_control_column($th);
 table_header($th);
@@ -147,6 +148,9 @@ end_table(1);
 
 //-----------------------------------------------------------------------------------
 
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+hidden('type');
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 if ($selected_id != -1) // We've selected a tag 
@@ -169,6 +173,8 @@ hidden('type');
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
+$tag_kind = get_post('type') == TAG_ACCOUNT ? _('Account Tag') : _('Dimension Tag');
+ma_modal_end($selected_id == -1 ? sprintf(_('New %s'), $tag_kind) : sprintf(_('Edit %s'), $tag_kind), $modal_open, array('type'));
 
 end_form();
 

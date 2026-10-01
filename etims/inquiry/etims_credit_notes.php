@@ -49,7 +49,7 @@ if (!$result['ok']) {
 
 $credits = isset($result['data']['credit']) ? $result['data']['credit'] : array();
 
-start_table(TABLESTYLE, "width=98%");
+start_table(TABLESTYLE, "width='100%'");
 table_header(array(_("Trader Invoice No"), _("Stanbest Credit No"), _("Original Invoice No"), _("Customer"),
 	_("Date"), _("Total"), _("Receipt Sign"), _("Status"), ''));
 

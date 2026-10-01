@@ -291,7 +291,7 @@ $security_areas =array(
 	'SA_COMMTEMPLATES' => array(SS_COMMS_C|2, _("Message templates")),
 	'SA_COMMRULES' => array(SS_COMMS_C|3, _("Notification rules (which events fire on which channel)")),
 	'SA_COMMRECIPIENTPREFS' => array(SS_COMMS_C|4, _("Recipient opt-in / opt-out preferences")),
-	'SA_COMMSEND' => array(SS_COMMS|1, _("Send test messages")),
+	'SA_COMMSEND' => array(SS_COMMS|1, _("Send test and manual messages (New SMS / New Email)")),
 	'SA_COMMLOG' => array(SS_COMMS_A|1, _("Communications delivery log")),
 );
 

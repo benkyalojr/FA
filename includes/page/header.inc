@@ -92,10 +92,12 @@ function page_header($title, $no_menu=false, $is_index=false, $onload="", $js=""
 	// titles and screen header
 	global $path_to_root, $SysPrefs, $db_connections;
 
+	// UI helpers (ma_sales_*, ...) are used by page bodies, which also run on AJAX updates.
+	include_once($path_to_root . '/ui/renderer.php');
+
 	if (in_ajax() || isset($_POST['REP_ID']))
 		return; // just for speed up
 
-	include_once($path_to_root . '/ui/renderer.php');
 	require_once $path_to_root.'/ui/date_picker.inc';
 	ma_date_picker_assets();
 	add_js_ufile($path_to_root . '/ui/workspace.js?v=' . filemtime($path_to_root . '/ui/workspace.js'));

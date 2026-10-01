@@ -21,6 +21,15 @@ include($path_to_root . "/sales/includes/db/credit_note_reasons_db.inc");
 
 include($path_to_root . "/includes/ui.inc");
 
+// Read-only readiness check: the table is created by the deployment migration,
+// never by a page request.
+if (!db_num_rows(db_query("SHOW TABLES LIKE '".TB_PREF."credit_note_reasons'"))) {
+	display_error(sprintf(_('Credit note reasons need a deployment update. Ask your administrator to run: php scripts/run_migrations.php %d --apply --only=credit_note_reasons'),
+		isset($_SESSION['wa_current_user']->cur_con) ? (int)$_SESSION['wa_current_user']->cur_con : 0));
+	end_page();
+	exit;
+}
+
 simple_page_mode(true);
 //-----------------------------------------------------------------------------------
 
@@ -77,7 +86,8 @@ if ($Mode == 'RESET')
 $result = get_all_credit_note_reasons(check_value('show_inactive'));
 
 start_form();
-start_table(TABLESTYLE, "width=40%");
+ma_settings_new_bar(_('Add New'));
+start_table(TABLESTYLE, "width='100%'");
 $th = array(_("Description"), '', '');
 inactive_control_column($th);
 table_header($th);
@@ -100,6 +110,8 @@ echo '<br>';
 
 //-----------------------------------------------------------------------------------
 
+$modal_open = isset($_GET['new']) || $selected_id != -1 || in_array($Mode, array('ADD_ITEM', 'UPDATE_ITEM'));
+ma_modal_begin();
 start_table(TABLESTYLE2);
 
 if ($selected_id != -1)
@@ -119,6 +131,7 @@ text_row_ex(_("Description:"), 'reason_description', 50);
 end_table(1);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
+ma_modal_end($selected_id == -1 ? _('New Credit Note Reason') : _('Edit Credit Note Reason'), $modal_open);
 
 end_form();
 
