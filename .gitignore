@@ -19,4 +19,6 @@ installed_extensions.php
 config.php
 config_db.php
 api/config.php
+# ui/config.php is the product identity (name, description), not an instance secret
+!ui/config.php
 !index.php
