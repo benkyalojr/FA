@@ -374,3 +374,36 @@ button.ma-sales-new { border: 0; font-family: inherit; cursor: pointer; }
 .ma-comp textarea { resize: vertical; }
 .ma-comp .select2-container { width: 100% !important; }
 @media (max-width: 800px) { .ma-gw-grid { grid-template-columns: 1fr; } }
+
+/* Active tab / settings button: solid orange with white text */
+:root { --color-tab-active: #f97316; --color-tab-active-hover: #ea6a0a; }
+.ma-sales-tab.active, .ma-sales-tab.active:hover { background: var(--color-tab-active); color: #fff !important; box-shadow: none; }
+.ma-sales-tab.active svg, .ma-sales-tab.active span { color: #fff; }
+.ma-settings-btn.active, .ma-settings-btn.active:hover { background: var(--color-tab-active); border-color: var(--color-tab-active); color: #fff !important; }
+.ma-doc-tab.active { color: var(--color-tab-active); border-bottom-color: var(--color-tab-active); }
+
+/* Broadcast form */
+.ma-bc-audience { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--color-divider); border-radius: 10px; padding: 10px 14px 12px; margin: 0; }
+.ma-bc-audience legend { padding: 0 6px; font-size: 11px; font-weight: 600; color: var(--color-text-muted); }
+.ma-comp .ma-bc-choice, .ma-comp .ma-bc-confirm { flex-direction: row; align-items: flex-start; gap: 10px; font-size: 13px; font-weight: 400; color: var(--color-text); cursor: pointer; }
+.ma-bc-choice small { display: block; font-size: 11px; color: var(--color-text-muted); }
+.ma-bc-choice input, .ma-bc-confirm input { margin-top: 3px; width: auto; min-height: 0; }
+
+/* Setup landing page */
+.ma-setup-kicker { margin: 0 0 14px; font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--color-text-muted); }
+.ma-setup-card { margin-bottom: 16px; }
+.ma-setup-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--color-divider); }
+.ma-setup-head h3 { margin: 0; font-size: 14px; font-weight: 750; }
+.ma-setup-icon { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; color: #fff; }
+.ma-setup-icon svg { width: 16px; height: 16px; }
+.ma-setup-icon.tone-blue { background: #2462ff; } .ma-setup-icon.tone-purple { background: #7c4dff; } .ma-setup-icon.tone-orange { background: #f97316; }
+.ma-setup-icon.tone-green { background: #12ae5d; } .ma-setup-icon.tone-teal { background: #15abc4; }
+.ma-setup-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 12px; }
+.ma-setup-item { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 10px; color: var(--color-text); text-decoration: none; }
+.ma-setup-item:hover, .ma-setup-item:focus-visible { background: var(--color-primary-tint); }
+.ma-setup-item strong { font-size: 13px; font-weight: 700; }
+.ma-setup-item:hover strong { color: var(--color-primary); }
+.ma-setup-item span { font-size: 12px; line-height: 1.5; color: var(--color-text-muted); }
+@media (max-width: 1250px) { .ma-setup-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .ma-setup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .ma-setup-grid { grid-template-columns: 1fr; } }

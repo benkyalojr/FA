@@ -7,7 +7,8 @@
 function ma_settings_prefixes()
 {
     return array('orders' => 'sales', 'customers' => 'customers', 'AP' => 'purchases', 'suppliers' => 'suppliers',
-        'stock' => 'inventory', 'banking' => 'banking', 'GL' => 'ledger', 'statements' => 'statements', 'taxes' => 'taxes', 'communications' => 'communications');
+        'stock' => 'inventory', 'banking' => 'banking', 'GL' => 'ledger', 'statements' => 'statements', 'taxes' => 'taxes', 'communications' => 'communications',
+        'manuf' => 'manufacturing', 'assets' => 'assets', 'proj' => 'dimensions');
 }
 
 function ma_settings_path($link)
@@ -112,7 +113,8 @@ function ma_settings_toolbar($ctx)
     list($app_id, $tabs, $active) = $ctx;
     $app = $_SESSION['App']->applications[$app_id];
     $back = array('orders' => 'index.php?application=orders', 'customers' => 'sales/manage/customer_list.php', 'suppliers' => 'purchasing/manage/supplier_list.php',
-        'stock' => 'inventory/manage/item_list.php', 'taxes' => 'taxes/tax_periods.php', 'communications' => 'communications/inquiry/comm_log_inquiry.php');
+        'stock' => 'inventory/manage/item_list.php', 'taxes' => 'taxes/tax_periods.php', 'communications' => 'communications/inquiry/comm_log_inquiry.php',
+        'manuf' => 'manufacturing/search_work_orders.php?outstanding_only=1', 'assets' => 'fixed_assets/inquiry/stock_inquiry.php', 'proj' => 'dimensions/inquiry/search_dimensions.php?outstanding_only=1');
     echo '<div class="ma-sales-toolbar"><nav class="ma-sales-tabs" aria-label="'.ma_ui_escape(_('Settings')).'">';
     echo '<a class="ma-sales-tab ma-settings-back" href="'.ma_ui_escape(ma_ui_href($back[$app_id] ?? 'index.php?application='.rawurlencode($app_id))).'" title="'
         .ma_ui_escape(sprintf(_('Back to %s'), ma_ui_label($app->name))).'">&lsaquo; <span>'.ma_ui_escape(ma_ui_label($app->name)).'</span></a>';
@@ -140,4 +142,15 @@ if (!function_exists('field_hint')) {
     {
         return ' <span class="ma-hint" tabindex="0" role="note" title="'.ma_ui_escape($text).'" aria-label="'.ma_ui_escape($text).'">i</span>';
     }
+}
+
+// A screen that needs some master data first: explain what to create, with a link,
+// instead of FrontAccounting's bare red error. Ends the page when $ok is false.
+function ma_require_data($ok, $title, $text, $link_label, $link)
+{
+    if ($ok) return;
+    echo '<div class="ma-empty"><strong>'.ma_ui_escape($title).'</strong><p>'.ma_ui_escape($text).'</p>'
+        .'<p><a class="ma-sales-new" href="'.ma_ui_escape(ma_ui_href($link)).'">'.ma_ui_escape($link_label).'</a></p></div>';
+    end_page();
+    exit;
 }

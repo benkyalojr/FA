@@ -28,7 +28,7 @@ if (user_use_date_picker())
 page(_($help_context = "Work Order Entry"), false, false, "", $js);
 
 
-check_db_has_manufacturable_items(_("There are no manufacturable items defined in the system."));
+ma_require_data(db_has_manufacturable_items(), _("No manufacturable items yet"), _("A work order produces an item of type Manufactured. Create one first."), _("Create an Item"), "inventory/manage/items.php?");
 
 check_db_has_locations(("There are no inventory locations defined in the system."));
 

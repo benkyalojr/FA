@@ -10,7 +10,11 @@ require_once __DIR__ . '/ledger.inc';
 require_once __DIR__ . '/statements.inc';
 require_once __DIR__ . '/taxes.inc';
 require_once __DIR__ . '/communications.inc';
+require_once __DIR__ . '/manufacturing.inc';
+require_once __DIR__ . '/assets.inc';
+require_once __DIR__ . '/dimensions.inc';
 require_once __DIR__ . '/settings.inc';
+require_once __DIR__ . '/setup.inc';
 
 class ma_renderer
 {
@@ -34,6 +38,11 @@ class ma_renderer
         $inventory_list = $inventory_toolbar && ma_inventory_is_list_screen();
         $purchases_toolbar = !$no_menu && !$customers_toolbar && !$suppliers_toolbar && !$sales_toolbar && !$inventory_toolbar && ma_purchases_is_purchasing_screen();
         $purchases_list = $purchases_toolbar && ma_purchases_is_list_screen();
+        if ($finance_module) {
+            // A finance-style workspace owns the screen (e.g. fixed assets opened from the inventory screens).
+            $customers_toolbar = $suppliers_toolbar = $sales_toolbar = $inventory_toolbar = $purchases_toolbar = false;
+            $sales_list = $purchases_list = $inventory_list = false;
+        }
         $finance_list = $finance_module && ma_finance_is_list_screen($finance_module);
         $list_screen = $finance_list || $sales_list || $purchases_list || $inventory_list || ($customers_toolbar && ma_customers_is_list_screen()) || ($suppliers_toolbar && ma_suppliers_is_list_screen());
         // A module's settings screens share one tab strip and the card-style list layout.
@@ -69,6 +78,10 @@ class ma_renderer
         $id = is_string($_GET['application']) ? $_GET['application'] : '';
         if (!isset($navigation[$id])) {
             echo '<div class="ma-empty">'.ma_ui_escape(_('No available actions in this module. Choose a module from the sidebar.')).'</div>';
+            return;
+        }
+        if ($id === 'system') {
+            ma_setup_overview($navigation);
             return;
         }
         if ($id === MA_SALES_APP) {

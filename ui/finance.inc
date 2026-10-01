@@ -5,7 +5,7 @@ require_once __DIR__ . '/inventory.inc';
 
 function ma_finance_modules()
 {
-    return array('banking', 'ledger', 'statements', 'taxes', 'communications');
+    return array('banking', 'ledger', 'statements', 'taxes', 'communications', 'manufacturing', 'assets', 'dimensions');
 }
 
 // The finance workspace the current screen belongs to, or null.
@@ -40,6 +40,7 @@ function ma_finance_is_list_screen($m)
     if ($m === 'banking') return in_array($name, array('bank_inquiry.php', 'bank_account_reconcile.php'), true);
     if ($m === 'taxes') return ma_taxes_active_tab() !== 'periods';
     if ($m === 'communications') return true;
+    if (function_exists('ma_'.$m.'_is_list_screen')) return call_user_func('ma_'.$m.'_is_list_screen');
     return false;
 }
 
@@ -61,7 +62,7 @@ function ma_finance_toolbar($m)
     }
     echo '</nav><div class="ma-sales-actions">';
     ma_sales_menu(_('Reports'), 'chart', call_user_func('ma_'.$m.'_reports_links'));
-    ma_settings_button(array('banking'=>'banking','ledger'=>'GL','statements'=>'statements','taxes'=>'taxes','communications'=>'communications')[$m]);
+    ma_settings_button(array('banking'=>'banking','ledger'=>'GL','statements'=>'statements','taxes'=>'taxes','communications'=>'communications','manufacturing'=>'manuf','assets'=>'assets','dimensions'=>'proj')[$m]);
     echo '</div></div>';
 }
 

@@ -19,7 +19,7 @@ include_once($path_to_root . "/includes/date_functions.inc");
 include_once($path_to_root . "/includes/ui.inc");
 include_once($path_to_root . "/includes/data_checks.inc");
 
-check_db_has_bom_stock_items(_("There are no manufactured or kit items defined in the system."));
+ma_require_data(db_has_bom_stock_items(), _("No manufactured or kit items yet"), _("Bills of material are defined for items of type Manufactured. Create one first."), _("Create an Item"), "inventory/manage/items.php?");
 
 check_db_has_workcentres(_("There are no work centres defined in the system. BOMs require at least one work centre be defined."));
 

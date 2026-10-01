@@ -55,13 +55,13 @@ function comm_log_screen($channel, $title)
 
     // ---- compose (New SMS / New Email)
     $compose = $_POST['compose_channel'] ?? ($_GET['compose'] ?? '');
-    if (!$can_send || !in_array($compose, array('sms', 'email'), true)) $compose = '';
+    if (!$can_send || !in_array($compose, array('sms', 'email', 'broadcast'), true)) $compose = '';
     if ($compose !== '' && isset($_POST['send_message'])) {
-        list($ok, $msg) = comm_compose_send($compose);
+        list($ok, $msg) = $compose === 'broadcast' ? comm_broadcast_send() : comm_compose_send($compose);
         if ($ok) {
             display_notification($msg);
             $compose = '';
-            foreach (array('comp_party', 'comp_to', 'comp_subject', 'comp_body') as $k) unset($_POST[$k]);
+            foreach (array('comp_party', 'comp_to', 'comp_subject', 'comp_body', 'bc_subject', 'bc_body', 'bc_confirm') as $k) unset($_POST[$k]);
         } else
             display_error($msg);
     }
@@ -90,6 +90,7 @@ function comm_log_screen($channel, $title)
     if ($can_send) {
         if ($channel === null || $channel === 'sms') $new[] = array(_('New SMS'), $_SERVER['PHP_SELF'] . '?compose=sms');
         if ($channel === null || $channel === 'email') $new[] = array(_('New Email'), $_SERVER['PHP_SELF'] . '?compose=email');
+        $new[] = array(_('Broadcast'), $_SERVER['PHP_SELF'] . '?compose=broadcast' . ($channel !== null ? '&bc=' . $channel : ''));
     }
     ma_sales_filter_end('RefreshInquiry', _('Refresh'), $new, _('Show'));
 
@@ -128,7 +129,7 @@ function comm_log_screen($channel, $title)
         if ($row['subject']) $msg = trim($row['subject'] . ' - ' . $msg, ' -');
         $short = function_exists('mb_strimwidth') ? mb_strimwidth($msg, 0, 90, '...') : substr($msg, 0, 90);
         $key = $row['event_key'];
-        $event = isset($events[$key]) ? $events[$key]['label'] : ($key === 'manual' ? _('Manual message') : ($key === 'test_send' ? _('Test message') : $key));
+        $event = isset($events[$key]) ? $events[$key]['label'] : ($key === 'manual' ? _('Manual message') : ($key === 'test_send' ? _('Test message') : ($key === 'broadcast' ? _('Broadcast') : $key)));
         echo '<tr><td>' . $e($created !== '' ? sql2date(substr($created, 0, 10)) : '') . '</td><td>' . $e($created !== '' ? substr($created, 11, 5) : '') . '</td>'
             . '<td>' . ($name !== '' ? $e($name) : '-') . '</td><td>' . ($type ? $e($party_types[$type] ?? $type) : '-') . '</td>';
         if ($channel === null)
@@ -150,8 +151,9 @@ function comm_log_screen($channel, $title)
 
     // ---- compose modal
     ma_modal_begin();
-    if ($compose !== '') comm_compose_form($compose);
-    ma_modal_end($compose === 'sms' ? _('New SMS') : _('New Email'), $compose !== '');
+    if ($compose === 'broadcast') comm_broadcast_form($_GET['bc'] ?? ($channel ?? 'sms'));
+    elseif ($compose !== '') comm_compose_form($compose);
+    ma_modal_end($compose === 'sms' ? _('New SMS') : ($compose === 'broadcast' ? _('Broadcast') : _('New Email')), $compose !== '');
 
     end_form();
     end_page();

@@ -221,7 +221,7 @@ INSERT INTO `0_chart_master` VALUES
 ('2120', '', 'Accrued Income Tax - State', '4', '0'),
 ('2130', '', 'Accrued Franchise Tax', '4', '0'),
 ('2140', '', 'Accrued Real &amp; Personal Prop Tax', '4', '0'),
-('2150', '', 'Sales Tax', '4', '0'),
+('2150', '', 'VAT Control (Output and Input)', '4', '0'),
 ('2160', '', 'Accrued Use Tax Payable', '4', '0'),
 ('2210', '', 'Accrued Wages', '4', '0'),
 ('2220', '', 'Accrued Comp Time', '4', '0'),
@@ -636,7 +636,7 @@ CREATE TABLE `0_fiscal_year` (
 -- Data of table `0_fiscal_year` --
 
 INSERT INTO `0_fiscal_year` VALUES
-('1', '2021-01-01', '2021-12-31', '1');
+('1', '2026-01-01', '2026-12-31', '0');
 
 -- Structure of table `0_gl_trans` --
 
@@ -752,6 +752,10 @@ CREATE TABLE `0_item_tax_type_exemptions` (
 
 -- Data of table `0_item_tax_type_exemptions` --
 
+INSERT INTO `0_item_tax_type_exemptions` VALUES
+('1', '2'),
+('2', '1');
+
 -- Structure of table `0_item_tax_types` --
 
 DROP TABLE IF EXISTS `0_item_tax_types`;
@@ -763,12 +767,14 @@ CREATE TABLE `0_item_tax_types` (
   `inactive` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=4 ;
 
 -- Data of table `0_item_tax_types` --
 
 INSERT INTO `0_item_tax_types` VALUES
-('1', 'Regular', '0', '0');
+('1', 'Standard Rated (16%)', '0', '0'),
+('2', 'Zero Rated', '0', '0'),
+('3', 'Exempt', '1', '0');
 
 -- Structure of table `0_item_units` --
 
@@ -1658,7 +1664,8 @@ CREATE TABLE `0_tax_group_items` (
 -- Data of table `0_tax_group_items` --
 
 INSERT INTO `0_tax_group_items` VALUES
-('1', '1', '1');
+('1', '1', '1'),
+('1', '2', '1');
 
 -- Structure of table `0_tax_groups` --
 
@@ -1675,7 +1682,7 @@ CREATE TABLE `0_tax_groups` (
 -- Data of table `0_tax_groups` --
 
 INSERT INTO `0_tax_groups` VALUES
-('1', 'Tax', '0'),
+('1', 'VAT', '0'),
 ('2', 'Tax Exempt', '0');
 
 -- Structure of table `0_tax_types` --
@@ -1690,12 +1697,13 @@ CREATE TABLE `0_tax_types` (
   `name` varchar(60) NOT NULL DEFAULT '',
   `inactive` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=3 ;
 
 -- Data of table `0_tax_types` --
 
 INSERT INTO `0_tax_types` VALUES
-('1', '5', '2150', '2150', 'Tax', '0');
+('1', '16', '2150', '2150', 'VAT 16%', '0'),
+('2', '0', '2150', '2150', 'Zero Rated', '0');
 
 -- Structure of table `0_trans_tax_details` --
 

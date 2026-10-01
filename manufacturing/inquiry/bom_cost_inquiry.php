@@ -20,7 +20,7 @@ include_once($path_to_root . "/includes/ui.inc");
 include_once($path_to_root . "/includes/banking.inc");
 include_once($path_to_root . "/includes/data_checks.inc");
 
-check_db_has_bom_stock_items(_("There are no manufactured or kit items defined in the system."));
+ma_require_data(db_has_bom_stock_items(), _("No manufactured or kit items yet"), _("The costed bill of material needs at least one item of type Manufactured. Create one, then define its bill of material."), _("Create an Item"), "inventory/manage/items.php?");
 
 if (isset($_GET['stock_id']))
 {
