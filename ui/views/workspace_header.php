@@ -57,6 +57,7 @@
     </header>
     <main class="ma-content<?= !empty($list_screen) ? ' ma-sales-list' : '' ?>" id="main-content" tabindex="-1">
     <?php if (!empty($settings_ctx)) ma_settings_toolbar($settings_ctx); elseif (!empty($finance_module)) ma_finance_toolbar($finance_module); elseif (!empty($sales_toolbar)) ma_sales_toolbar(); elseif (!empty($customers_toolbar)) ma_customers_toolbar(); elseif (!empty($suppliers_toolbar)) ma_suppliers_toolbar(); elseif (!empty($inventory_toolbar)) ma_inventory_toolbar(); elseif (!empty($purchases_toolbar)) ma_purchases_toolbar(); ?>
+    <?php if (!empty($finance_module) && empty($settings_ctx)) ma_finance_subnav($finance_module); ?>
     <?php if (!empty($finance_list)) ma_finance_stats($finance_module); ?>
     <?php if (!empty($sales_list)) ma_sales_stats(ma_sales_active_tab()); elseif (!empty($purchases_list)) ma_purchases_stats(ma_purchases_active_tab()); elseif (!empty($inventory_list)) ma_inventory_stats_for_screen(); ?>
     <?php if (!empty($inventory_toolbar)) ma_inventory_header_new_bar(); ?>

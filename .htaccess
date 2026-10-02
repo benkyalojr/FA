@@ -1,5 +1,5 @@
 # Protect sensitive files.
-<FilesMatch "\.(inc|po|sh|.*sql|log)$">
+<FilesMatch "\.(inc|po|sh|.*sql|log|key|pem)$">
 	Order allow,deny
 	Deny from All
 	Satisfy All
@@ -34,4 +34,10 @@ DirectoryIndex index.php
 <IfModule mod_rewrite.c>
 	RewriteEngine On
 	RewriteRule ^share/invoice/([A-Za-z0-9_-]+)/?$ share/index.php?t=$1 [L,QSA]
+</IfModule>
+
+# M-Pesa callbacks: /pay/hook/<secret>/<kind>
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+	RewriteRule ^pay/hook/ index.php [L,QSA]
 </IfModule>

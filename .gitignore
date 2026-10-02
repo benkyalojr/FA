@@ -22,3 +22,7 @@ api/config.php
 # ui/config.php is the product identity (name, description), not an instance secret
 !ui/config.php
 !index.php
+
+/company/*/mpesa.key
+
+/mpesa/config.php

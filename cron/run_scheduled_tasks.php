@@ -87,3 +87,13 @@ try {
 } finally {
 	db_query("SELECT RELEASE_LOCK('bg_tasks_runner')");
 }
+
+// M-Pesa needs the full FA environment for accounting; isolate it from this CLI DB adapter.
+$mpesa_schema = db_fetch(db_query("SELECT value FROM ".TB_PREF."sys_prefs WHERE name='mpesa_schema_version'"));
+if ($mpesa_schema && (int)$mpesa_schema['value'] >= 2) {
+    $pending = db_fetch(db_query("SELECT COUNT(*) AS n FROM ".TB_PREF."mpesa_inbox WHERE processed_at IS NULL AND attempts < 8"));
+    if ((int)$pending['n'] > 0) {
+        $worker = proc_open(array(PHP_BINARY, __DIR__.'/mpesa_jobs.php', (string)(int)$supplier_company_id), array(0=>array('pipe','r'), 1=>STDOUT, 2=>STDERR), $pipes);
+        if (is_resource($worker)) { fclose($pipes[0]); if (proc_close($worker) !== 0) fwrite(STDERR, "M-Pesa worker failed; callbacks remain queued.\n"); }
+    }
+}

@@ -15,7 +15,8 @@ function migrate_admin_new_access()
 
 	$wanted = array('SA_RUNMIGRATIONS', 'SA_BGTASKS', 'SA_SYSTEMAUDIT',
 		'SA_ETIMSSETUP', 'SA_ETIMSITEMS', 'SA_ETIMSVIEW', 'SA_ETIMSXREPORT', 'SA_ETIMSZREPORT',
-		'SA_COMMSETUP', 'SA_COMMTEMPLATES', 'SA_COMMRULES', 'SA_COMMRECIPIENTPREFS', 'SA_COMMSEND', 'SA_COMMLOG');
+		'SA_COMMSETUP', 'SA_COMMTEMPLATES', 'SA_COMMRULES', 'SA_COMMRECIPIENTPREFS', 'SA_COMMSEND', 'SA_COMMLOG',
+		'SA_MPESASETUP', 'SA_MPESAVIEW', 'SA_MPESAREQUEST', 'SA_MPESAREVIEW', 'SA_MPESAPAYOUT', 'SA_MPESAAPPROVE');
 	$result = db_query("SELECT id, sections, areas FROM ".TB_PREF."security_roles WHERE role='System Administrator'",
 		'Cannot read security roles');
 	while ($row = db_fetch($result)) {

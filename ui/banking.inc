@@ -11,6 +11,7 @@ function ma_banking_tabs()
         'overview'    => array(_('Overview'), 'grid', 'index.php?application=banking', null),
         'inquiry'     => array(_('Bank Inquiry'), 'bank', 'gl/inquiry/bank_inquiry.php', 'SA_BANKTRANSVIEW'),
         'reconcile'   => array(_('Reconcile'), 'swap', 'gl/bank_account_reconcile.php', 'SA_RECONCILE'),
+        'mpesa'       => array(_('M-Pesa'), 'wallet', 'mpesa/inquiry/transactions.php', 'SA_MPESAVIEW'),
         'revaluation' => array(_('Revaluation of Currency Accounts'), 'chart', 'gl/manage/revaluate_currencies.php', 'SA_EXCHANGERATE'),
     );
 }
@@ -20,6 +21,7 @@ function ma_banking_active_tab()
     $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
     $name = basename($script);
     if ($name === 'index.php') return (is_string($_GET['application'] ?? null) && $_GET['application'] === MA_BANKING_APP) ? 'overview' : null;
+    if (strpos($script, '/mpesa/') !== false) return $name === 'mpesa_config.php' ? 'settings' : 'mpesa';
     if (strpos($script, '/gl/') === false) return null;
     switch ($name) {
         case 'bank_inquiry.php': return 'inquiry';
@@ -38,7 +40,27 @@ function ma_banking_new_links()
 }
 function ma_banking_reports_links()
 {
-    return ma_finance_app_links(MA_BANKING_APP, 1, array('gl/inquiry/bank_inquiry.php'));
+    return ma_finance_app_links(MA_BANKING_APP, 1, array('gl/inquiry/bank_inquiry.php', 'mpesa/inquiry/transactions.php', 'mpesa/inquiry/review.php',
+        'mpesa/inquiry/payouts.php', 'mpesa/inquiry/reconcile.php'));
+}
+
+// Second row of tabs shown on the M-Pesa screens.
+function ma_banking_subnav()
+{
+    if (ma_banking_active_tab() !== 'mpesa') return;
+    $name = basename($_SERVER['SCRIPT_NAME'] ?? '');
+    $review = 0;
+    if ((int)get_company_pref('mpesa_schema_version') >= 1) {   // tables exist only after the migration
+        require_once __DIR__ . '/dashboard.inc';
+        $review = (int)ma_dashboard_scalar("SELECT COUNT(*) FROM ".TB_PREF."mpesa_transactions WHERE status='review'");
+    }
+    $items = array('transactions.php' => array(_('Transactions'), 'mpesa/inquiry/transactions.php', 0), 'review.php' => array(_('Needs Review'), 'mpesa/inquiry/review.php', $review),
+        'payouts.php' => array(_('Payouts'), 'mpesa/inquiry/payouts.php', 0), 'reconcile.php' => array(_('Reconciliation'), 'mpesa/inquiry/reconcile.php', 0));
+    echo '<nav class="ma-subtabs" aria-label="'.ma_ui_escape(_('M-Pesa')).'">';
+    foreach ($items as $file => $it)
+        echo '<a class="ma-subtab'.($file === $name ? ' active' : '').'"'.($file === $name ? ' aria-current="page"' : '').' href="'.ma_ui_escape(ma_ui_href($it[1])).'">'
+            .ma_ui_escape($it[0]).($it[2] ? ' <span class="ma-subtab-count">'.(int)$it[2].'</span>' : '').'</a>';
+    echo '</nav>';
 }
 function ma_banking_settings_links()
 {

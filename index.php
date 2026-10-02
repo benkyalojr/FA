@@ -15,6 +15,14 @@
 		require __DIR__.'/share/index.php';
 		exit;
 	}
+	// M-Pesa callbacks (/pay/hook/<secret>/<kind>) are called by Safaricom, never by a logged-in user.
+	if (preg_match('~/pay/hook/(?:(\d+)/)?([A-Za-z0-9]{16,64})/([a-z0-9]+)/?$~', (string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH), $mpesa_m)) {
+		if ($mpesa_m[1] !== '') $mpesa_company = (int)$mpesa_m[1];
+		$mpesa_hook_secret = $mpesa_m[2];
+		$mpesa_hook_kind = $mpesa_m[3];
+		require __DIR__.'/mpesa/hook.php';
+		exit;
+	}
 	$path_to_root=".";
 	if (!file_exists($path_to_root.'/config_db.php'))
 		header("Location: ".$path_to_root."/install/index.php");

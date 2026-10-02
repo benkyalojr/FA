@@ -293,6 +293,15 @@ $security_areas =array(
 	'SA_COMMRECIPIENTPREFS' => array(SS_COMMS_C|4, _("Recipient opt-in / opt-out preferences")),
 	'SA_COMMSEND' => array(SS_COMMS|1, _("Send test and manual messages (New SMS / New Email)")),
 	'SA_COMMLOG' => array(SS_COMMS_A|1, _("Communications delivery log")),
+//
+// M-Pesa (Banking)
+//
+	'SA_MPESASETUP' => array(SS_GL_C|41, _("M-Pesa configuration")),
+	'SA_MPESAVIEW' => array(SS_GL_A|41, _("M-Pesa transactions, review list and reconciliation view")),
+	'SA_MPESAREQUEST' => array(SS_GL|41, _("Request M-Pesa payment from a customer (STK Push)")),
+	'SA_MPESAREVIEW' => array(SS_GL|42, _("Assign unmatched M-Pesa payments and import statements")),
+	'SA_MPESAPAYOUT' => array(SS_GL|43, _("Request M-Pesa payouts")),
+	'SA_MPESAAPPROVE' => array(SS_GL|44, _("Approve M-Pesa payouts")),
 );
 
 if (!@$SysPrefs->allow_gl_reopen)

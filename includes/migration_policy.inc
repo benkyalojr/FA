@@ -13,6 +13,7 @@ final class MigrationExecution
     {
         $routes = array(
             realpath(__DIR__.'/../admin/run_migrations.php')=>'SA_RUNMIGRATIONS',
+            realpath(__DIR__.'/../mpesa/manage/mpesa_config.php')=>'SA_MPESASETUP',
             realpath(__DIR__.'/../admin/inst_upgrade.php')=>'SA_SOFTWAREUPGRADE'
         );
         $route = realpath($_SERVER['SCRIPT_FILENAME'] ?? '');

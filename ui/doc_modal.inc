@@ -141,6 +141,19 @@ function ma_doc_viewer($type)
     return 'sales/view/'.$map[$type].'.php';
 }
 
+// M-Pesa request panel of an invoice: array(phone, due) when the logged-in user may ask for payment now.
+function ma_doc_mpesa($no)
+{
+    global $path_to_root;
+    if (!ma_doc_can('SA_MPESAREQUEST') || (int)get_company_pref('mpesa_schema_version') < 1) return null;
+    include_once($path_to_root.'/mpesa/includes/mpesa_post.inc');
+    if (!mpesa_configured()) return null;
+    $due = mpesa_invoice_outstanding(ST_SALESINVOICE, $no);
+    if ($due <= 0) return null;
+    $t = get_customer_trans($no, ST_SALESINVOICE);
+    return array(mpesa_customer_phone($t['debtor_no']), $due);
+}
+
 function ma_doc_can($area) { return $_SESSION['wa_current_user']->can_access_page($area); }
 
 // Returns array('title'=>, 'html'=>) for a document, or array('error'=>).
@@ -304,6 +317,9 @@ function ma_doc_render($type, $no)
     }
     if (!$void && ma_doc_can('SA_VOIDTRANSACTION') && !is_closed_trans($type, $no))
         $actions[] = ma_doc_action(_('Void'), 'admin/void_transaction.php?filterType='.$type.'&trans_no='.$no, '', 'danger');
+    $mp = ($type === ST_SALESINVOICE && !$void) ? ma_doc_mpesa($no) : null;
+    if ($mp)
+        $actions[] = '<button type="button" class="ma-doc-btn primary" data-doc-mpesa-toggle>'.ma_ui_icon('wallet').ma_doc_e(_('Request M-Pesa')).'</button>';
     if ($type === ST_SALESINVOICE && !$void)
         $actions[] = '<button type="button" class="ma-doc-btn" data-doc-share>'.ma_ui_icon('message').ma_doc_e(_('Share Link')).'</button>';
     else
@@ -313,7 +329,10 @@ function ma_doc_render($type, $no)
         .($ribbon ? '<div class="ma-doc-ribbon '.$ribbon[1].'" role="status">'.ma_doc_e(ma_doc_upper($ribbon[0])).'</div>' : '').'<div class="ma-doc-head"><div><span class="ma-doc-eyebrow">'.ma_doc_e(ma_doc_upper($label)).'</span><h1>'
         .ma_doc_e($label.' '.($ref !== '' ? $ref : '#'.$no)).'</h1><span class="ma-pill '.$status[1].'">'.ma_doc_e(ma_doc_upper($status[0])).'</span></div></div>';
     if ($void) $h .= '<div class="ma-doc-void">'.ma_doc_e(sprintf(_('Voided on %s'), sql2date($void['date_']))).($void['memo_'] !== '' ? ' - '.ma_doc_e($void['memo_']) : '').'</div>';
-    $h .= '<div class="ma-doc-summary">'.ma_doc_facts($facts).'<div class="ma-doc-actions">'.implode('', $actions).'</div></div><div class="ma-doc-share" hidden></div>';
+    $h .= '<div class="ma-doc-summary">'.ma_doc_facts($facts).'<div class="ma-doc-actions">'.implode('', $actions).'</div></div><div class="ma-doc-share" hidden></div>'
+        .($mp ? '<div class="ma-doc-mpesa" hidden><div class="ma-doc-mpesa-row"><label>'.ma_doc_e(_('Customer phone')).'<input type="text" data-mpesa-phone value="'.ma_doc_e($mp[0]).'" placeholder="0712345678" inputmode="tel"></label>'
+            .'<label>'.ma_doc_e(_('Amount')).'<input type="text" data-mpesa-amount value="'.ma_doc_e(number_format(floor($mp[1]), 0, '.', '')).'" inputmode="numeric"><small>Whole KES only</small></label>'
+            .'<button type="button" class="ma-doc-btn primary" data-mpesa-send>'.ma_doc_e(_('Send request')).'</button></div><div class="ma-doc-mpesa-msg" role="status"></div></div>' : '');
     $h .= '<div class="ma-doc-details"><section><h2>'.ma_doc_e(_('Document Details')).'</h2>'.ma_doc_facts($details).'</section>'.$parties.'</div>';
     $h .= '<nav class="ma-doc-tabs" role="tablist">';
     foreach ($tabs as $i => $tab)

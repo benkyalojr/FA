@@ -32,6 +32,7 @@
       var body = docEl('div', 'ma-modal-body'); panel.appendChild(head); panel.appendChild(body);
       docModal.appendChild(backdrop); docModal.appendChild(panel); document.body.appendChild(docModal);
     }
+    docModal.setAttribute('data-doc-url', url);
     docModal.setAttribute('data-share-url', url.split('?')[0].replace('doc_modal.php', 'doc_share.php'));
     var bodyEl = docModal.querySelector('.ma-modal-body'), titleEl = docModal.querySelector('h2');
     bodyEl.textContent = ''; bodyEl.appendChild(docEl('div', 'ma-doc-loading', 'Loading\u2026'));
@@ -45,6 +46,29 @@
       titleEl.textContent = meta ? meta.getAttribute('data-title') : '';
       bodyEl.textContent = ''; while (tpl.firstChild) bodyEl.appendChild(tpl.firstChild);
     }).catch(function () { if (seq === docSeq) { closeDoc(); window.open(original, '_blank'); } });
+  }
+  // M-Pesa STK Push from the invoice modal: send the request, then watch for the customer's answer.
+  function mpesaRequest(btn) {
+    var doc = btn.closest('.ma-doc'), box = doc.querySelector('.ma-doc-mpesa'), msg = box.querySelector('.ma-doc-mpesa-msg');
+    var base = docModal.getAttribute('data-share-url').replace('doc_share.php', 'mpesa_stk.php'), body = new URLSearchParams();
+    body.set('trans_no', doc.getAttribute('data-doc-no')); body.set('_token', doc.getAttribute('data-doc-token'));
+    body.set('phone', box.querySelector('[data-mpesa-phone]').value); body.set('amount', box.querySelector('[data-mpesa-amount]').value);
+    function say(text, cls) { msg.textContent = text; msg.className = 'ma-doc-mpesa-msg' + (cls ? ' ' + cls : ''); }
+    btn.disabled = true; say('Sending the request\u2026');
+    fetch(base, { method: 'POST', credentials: 'same-origin', body: body, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.json(); }).then(function (res) {
+        if (res.error) { btn.disabled = false; say(res.error, 'err'); return; }
+        say((res.message || 'Request sent.') + ' Waiting for the customer to enter their PIN\u2026');
+        var tries = 0, timer = setInterval(function () {
+          tries++;
+          fetch(base + '?poll=' + encodeURIComponent(res.tx), { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (st) {
+            if (st.status === 'posted') { clearInterval(timer); say('Paid. M-Pesa receipt ' + (st.receipt || '') + '. The payment has been recorded.', 'ok'); setTimeout(function () { openDoc(docModal.getAttribute('data-doc-url')); }, 1800); }
+            else if (st.status === 'failed' || st.status === 'cancelled') { clearInterval(timer); btn.disabled = false; say(st.status === 'cancelled' ? 'The customer cancelled the request.' : 'The payment was not completed' + (st.message ? ': ' + st.message : '.'), 'err'); }
+            else if (st.status === 'review') { clearInterval(timer); say('Paid (receipt ' + (st.receipt || '') + ') but it needs review before it is posted. See M-Pesa > Needs Review.', 'err'); }
+            else if (tries >= 40) { clearInterval(timer); btn.disabled = false; say('No answer yet. If the customer paid, it appears in M-Pesa > Transactions shortly.', 'err'); }
+          }).catch(function () {});
+        }, 3000);
+      }).catch(function () { btn.disabled = false; say('Could not send the request. Please try again.', 'err'); });
   }
   // Public share link of an invoice: create (or fetch) it, show it, or withdraw it.
   function shareDoc(btn, action) {
@@ -79,6 +103,10 @@
     }
     var shareBtn = t.closest('[data-doc-share]');
     if (shareBtn) { shareDoc(shareBtn, 'share'); return; }
+    var mpToggle = t.closest('[data-doc-mpesa-toggle]');
+    if (mpToggle) { var mp = mpToggle.closest('.ma-doc').querySelector('.ma-doc-mpesa'); mp.hidden = !mp.hidden; if (!mp.hidden) mp.querySelector('[data-mpesa-phone]').focus(); return; }
+    var mpSend = t.closest('[data-mpesa-send]');
+    if (mpSend) { mpesaRequest(mpSend); return; }
     var stopBtn = t.closest('[data-doc-unshare]');
     if (stopBtn) { shareDoc(stopBtn, 'revoke'); return; }
     var copyShare = t.closest('[data-doc-copyurl]');

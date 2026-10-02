@@ -37,11 +37,18 @@ function ma_finance_is_list_screen($m)
 {
     $name = basename($_SERVER['SCRIPT_NAME'] ?? '');
     if ($m === 'ledger') return in_array($name, array('gl_account_inquiry.php', 'journal_inquiry.php'), true);
-    if ($m === 'banking') return in_array($name, array('bank_inquiry.php', 'bank_account_reconcile.php'), true);
+    if ($m === 'banking') return in_array($name, array('bank_inquiry.php', 'bank_account_reconcile.php'), true) || ma_banking_active_tab() === 'mpesa';
     if ($m === 'taxes') return ma_taxes_active_tab() !== 'periods';
     if ($m === 'communications') return true;
     if (function_exists('ma_'.$m.'_is_list_screen')) return call_user_func('ma_'.$m.'_is_list_screen');
     return false;
+}
+
+// Optional second row of tabs a workspace shows under its toolbar (ma_<module>_subnav()).
+function ma_finance_subnav($m)
+{
+    $fn = 'ma_'.$m.'_subnav';
+    if (function_exists($fn)) call_user_func($fn);
 }
 
 function ma_finance_stats($m)

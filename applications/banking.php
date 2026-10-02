@@ -31,6 +31,14 @@ class banking_app extends application
 		$this->add_module(_("Inquiries and Reports"));
 		$this->add_lapp_function(1, _("Bank Account &Inquiry"),
 			"gl/inquiry/bank_inquiry.php?", 'SA_BANKTRANSVIEW', MENU_INQUIRY);
+		$this->add_lapp_function(1, _("M-Pesa &Transactions"),
+			"mpesa/inquiry/transactions.php?", 'SA_MPESAVIEW', MENU_INQUIRY);
+		$this->add_lapp_function(1, _("M-Pesa &Needs Review"),
+			"mpesa/inquiry/review.php?", 'SA_MPESAVIEW', MENU_INQUIRY);
+		$this->add_lapp_function(1, _("M-Pesa &Payouts"),
+			"mpesa/inquiry/payouts.php?", 'SA_MPESAVIEW', MENU_INQUIRY);
+		$this->add_lapp_function(1, _("M-Pesa Reconc&iliation"),
+			"mpesa/inquiry/reconcile.php?", 'SA_MPESAVIEW', MENU_INQUIRY);
 		$this->add_rapp_function(1, _("Banking &Reports"),
 			"reporting/reports_main.php?Class=5", 'SA_BANKREP', MENU_REPORT);
 
@@ -41,6 +49,8 @@ class banking_app extends application
 			"gl/manage/currencies.php?", 'SA_CURRENCY', MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _("&Exchange Rates"),
 			"gl/manage/exchange_rates.php?", 'SA_EXCHANGERATE', MENU_MAINTENANCE);
+		$this->add_rapp_function(2, _("M-&Pesa Configuration"),
+			"mpesa/manage/mpesa_config.php?", 'SA_MPESASETUP', MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _("&Revaluation of Currency Accounts"),
 			"gl/manage/revaluate_currencies.php?", 'SA_EXCHANGERATE', MENU_MAINTENANCE);
 
