@@ -56,6 +56,10 @@ define('SS_GL_C',	61<<8);
 define('SS_GL',		62<<8);
 define('SS_GL_A',	63<<8);
 
+define('SS_MPESA_C',64<<8); // M-Pesa configuration
+define('SS_MPESA',	65<<8);	// M-Pesa operations
+define('SS_MPESA_A',66<<8); // M-Pesa inquiries and reconciliation
+
 define('SS_COMMS_C',90<<8); // communications configuration
 define('SS_COMMS',	91<<8);	// communications sending
 define('SS_COMMS_A',92<<8); // communications log
@@ -84,6 +88,9 @@ $security_sections = array(
  	SS_GL_C => _("Banking & GL configuration"),
  	SS_GL => _("Banking & GL transactions"),
  	SS_GL_A => _("Banking & GL analytics"),
+	SS_MPESA_C => _("M-Pesa configuration"),
+	SS_MPESA => _("M-Pesa payments and payouts"),
+	SS_MPESA_A => _("M-Pesa inquiries and reconciliation"),
 	SS_COMMS_C => _("Communications configuration"),
 	SS_COMMS => _("Communications sending"),
 	SS_COMMS_A => _("Communications analytics")
@@ -294,14 +301,14 @@ $security_areas =array(
 	'SA_COMMSEND' => array(SS_COMMS|1, _("Send test and manual messages (New SMS / New Email)")),
 	'SA_COMMLOG' => array(SS_COMMS_A|1, _("Communications delivery log")),
 //
-// M-Pesa (Banking)
+// M-Pesa (shown as its own group on Setup > Access Setup)
 //
-	'SA_MPESASETUP' => array(SS_GL_C|41, _("M-Pesa configuration")),
-	'SA_MPESAVIEW' => array(SS_GL_A|41, _("M-Pesa transactions, review list and reconciliation view")),
-	'SA_MPESAREQUEST' => array(SS_GL|41, _("Request M-Pesa payment from a customer (STK Push)")),
-	'SA_MPESAREVIEW' => array(SS_GL|42, _("Assign unmatched M-Pesa payments and import statements")),
-	'SA_MPESAPAYOUT' => array(SS_GL|43, _("Request M-Pesa payouts")),
-	'SA_MPESAAPPROVE' => array(SS_GL|44, _("Approve M-Pesa payouts")),
+	'SA_MPESASETUP' => array(SS_MPESA_C|1, _("M-Pesa configuration")),
+	'SA_MPESAVIEW' => array(SS_MPESA_A|1, _("M-Pesa transactions, review list and reconciliation view")),
+	'SA_MPESAREQUEST' => array(SS_MPESA|1, _("Request M-Pesa payment from a customer (STK Push)")),
+	'SA_MPESAREVIEW' => array(SS_MPESA|2, _("Assign unmatched M-Pesa payments and import statements")),
+	'SA_MPESAPAYOUT' => array(SS_MPESA|3, _("Request M-Pesa payouts")),
+	'SA_MPESAAPPROVE' => array(SS_MPESA|4, _("Approve M-Pesa payouts")),
 );
 
 if (!@$SysPrefs->allow_gl_reopen)

@@ -38,6 +38,7 @@ function rights_module($section_code)
 		array(41, 43, _('Manufacturing')),
 		array(51, 53, _('Dimensions')),
 		array(61, 63, _('Banking and general ledger')),
+		array(64, 66, _('M-Pesa')),
 		array(90, 92, _('Communications')),
 	) as $family)
 		if ($n >= $family[0] && $n <= $family[1]) return $family[2];
