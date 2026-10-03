@@ -14,6 +14,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 	include_once($path_to_root . '/applications/application.php');
 	include_once($path_to_root . '/applications/customers.php');
 	include_once($path_to_root . '/applications/customer_directory.php');
+	include_once($path_to_root . '/applications/pos.php');
 	include_once($path_to_root . '/applications/suppliers.php');
 	include_once($path_to_root . '/applications/supplier_directory.php');
 	include_once($path_to_root . '/applications/inventory.php');
@@ -84,6 +85,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
 			$this->menu->add_item(_("Logout"), "/account/access/logout.php");
 			$this->applications = array();
 			$this->add_application(new customers_app());
+			$this->add_application(new pos_app());
 			$this->add_application(new customer_directory_app());
 			$this->add_application(new suppliers_app());
 			$this->add_application(new supplier_directory_app());

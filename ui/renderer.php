@@ -45,6 +45,8 @@ class ma_renderer
         }
         $finance_list = $finance_module && ma_finance_is_list_screen($finance_module);
         $list_screen = $finance_list || $sales_list || $purchases_list || $inventory_list || ($customers_toolbar && ma_customers_is_list_screen()) || ($suppliers_toolbar && ma_suppliers_is_list_screen());
+        // The point of sale screen uses the full width without the page panel.
+        if (!$no_menu && preg_match('~/pos/[^/]+\.php$~', $_SERVER['SCRIPT_NAME'] ?? '')) $list_screen = true;
         // A module's settings screens share one tab strip and the card-style list layout.
         $settings_ctx = !$no_menu ? ma_settings_context($active_app) : null;
         if ($settings_ctx) {

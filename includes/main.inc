@@ -51,6 +51,10 @@ function page($title, $no_menu=false, $is_index=false, $onload="", $js="", $scri
 		ensure_select2_assets();
 	}
 
+	// A page produced by a form POST would make Reload ask to re-send the form. Replacing the history
+	// entry with the same URL turns it into a plain page, so Reload just reloads (a GET) on every screen.
+	add_js_source("if (window.history && history.replaceState) { try { history.replaceState(history.state, '', location.href); } catch (e) {} }");
+
    	include_once($path_to_root . "/includes/page/header.inc");
 
    	page_header($title, $no_menu, $is_index, $onload, $js, $css);
@@ -86,7 +90,7 @@ function css_files_ensure_init() {
 	if (!isset($css_files))
 	{
 		$css_files = array();
-		foreach (array('design/tokens.css', 'components/workspace.css', 'components/forms.css', 'components/sales.css') as $asset)
+		foreach (array('design/tokens.css', 'components/workspace.css', 'components/forms.css', 'components/sales.css', 'components/pos.css') as $asset)
 			$css_files[] = $path_to_root . '/ui/' . $asset . '?v=' . filemtime($path_to_root . '/ui/' . $asset);
 	}
 }

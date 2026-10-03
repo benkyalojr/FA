@@ -23,7 +23,7 @@ function ma_ui_href($link)
 function ma_ui_navigation($applications)
 {
     $result = array();
-    $icons = array('orders'=>'receipt', 'customers'=>'people', 'suppliers'=>'user', 'reports'=>'chart', 'banking'=>'wallet', 'statements'=>'book', 'AP'=>'cart', 'farmers'=>'leaf', 'stock'=>'package',
+    $icons = array('orders'=>'receipt', 'pos'=>'register', 'customers'=>'people', 'suppliers'=>'user', 'reports'=>'chart', 'banking'=>'wallet', 'statements'=>'book', 'AP'=>'cart', 'farmers'=>'leaf', 'stock'=>'package',
         'assets'=>'pie', 'manuf'=>'factory', 'transport'=>'truck', 'PR'=>'wallet', 'HRM'=>'people',
         'communications'=>'message', 'proj'=>'layers', 'GL'=>'bank', 'taxes'=>'file', 'system'=>'settings');
     foreach ($applications as $app) {
@@ -114,6 +114,7 @@ function ma_ui_icon($name)
         'gauge'=>'<path d="M4 19a10 10 0 1 1 16 0Z"/><path d="m12 13 4-4M6 12h1m5-6v1m5 5h1"/>',
         'bank'=>'<path d="m3 9 9-6 9 6H3Zm2 3v6m5-6v6m4-6v6m5-6v6M3 21h18"/>',
         'receipt'=>'<path d="M5 3h14v18l-3-2-4 2-4-2-3 2V3Zm4 5h6m-6 4h6"/>',
+        'register'=>'<rect x="4" y="3" width="16" height="7" rx="1.5"/><path d="M6 10l-2 11h16l-2-11M9 14h.01M12 14h.01M15 14h.01M9 17.5h.01M12 17.5h.01M15 17.5h.01"/>',
         'cart'=>'<path d="M3 3h2l3 12h10l3-9H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/>',
         'package'=>'<path d="m3 7 9-4 9 4v10l-9 4-9-4V7Zm0 0 9 4 9-4M12 11v10M8 5l9 4"/>',
         'people'=>'<circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 4v2"/>',
