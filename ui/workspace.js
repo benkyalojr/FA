@@ -70,6 +70,20 @@
         }, 3000);
       }).catch(function () { btn.disabled = false; say('Could not send the request. Please try again.', 'err'); });
   }
+  // Restamp an invoice or credit note with KRA eTIMS: try now, otherwise it is queued for automatic retries.
+  function restampDoc(btn) {
+    var doc = btn.closest('.ma-doc'), box = doc.querySelector('.ma-doc-kra-msg'), body = new URLSearchParams();
+    body.set('trans_type', doc.getAttribute('data-doc-type')); body.set('trans_no', doc.getAttribute('data-doc-no')); body.set('_token', doc.getAttribute('data-doc-token'));
+    box.hidden = false; box.textContent = ''; box.appendChild(docEl('span', 'ma-doc-share-note', 'Contacting KRA\u2026')); btn.disabled = true;
+    fetch(docModal.getAttribute('data-share-url').replace('doc_share.php', 'doc_restamp.php'), {
+      method: 'POST', credentials: 'same-origin', body: body, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      box.textContent = ''; btn.disabled = false;
+      if (res.error) { box.appendChild(docEl('span', 'ma-doc-share-note err', res.error)); return; }
+      box.appendChild(docEl('span', 'ma-doc-share-note', res.message || 'Done.'));
+      setTimeout(function () { if (docModal) openDoc(docModal.getAttribute('data-doc-url')); }, 1500);
+    }).catch(function () { btn.disabled = false; box.textContent = ''; box.appendChild(docEl('span', 'ma-doc-share-note err', 'Could not reach the server. Please try again.')); });
+  }
   // Public share link of an invoice: create (or fetch) it, show it, or withdraw it.
   function shareDoc(btn, action) {
     var doc = btn.closest('.ma-doc'), box = doc.querySelector('.ma-doc-share'), body = new URLSearchParams();
@@ -101,6 +115,8 @@
       doc.querySelectorAll('[data-doc-panel]').forEach(function (p) { p.hidden = p.getAttribute('data-doc-panel') !== tab.getAttribute('data-doc-tab'); });
       return;
     }
+    var restampBtn = t.closest('[data-doc-restamp]');
+    if (restampBtn) { restampDoc(restampBtn); return; }
     var shareBtn = t.closest('[data-doc-share]');
     if (shareBtn) { shareDoc(shareBtn, 'share'); return; }
     var mpToggle = t.closest('[data-doc-mpesa-toggle]');

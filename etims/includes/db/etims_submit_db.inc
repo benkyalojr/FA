@@ -358,6 +358,13 @@ function bg_task_etims_stamp(array $payload)
 	if (!etims_stamping_active())
 		throw new Exception('eTIMS stamping is currently switched off');
 
+	// A queued retry that fires after the document was stamped some other way (e.g. a manual restamp) must not
+	// submit a second receipt to KRA.
+	$done = db_fetch(db_query("SELECT status FROM " . TB_PREF . "etims_submissions
+		WHERE trans_type=" . db_escape($trans_type) . " AND trans_no=" . db_escape($trans_no), 'Cannot check eTIMS submission'));
+	if ($done && $done['status'] === 'stamped')
+		return;
+
 	db_query("UPDATE " . TB_PREF . "etims_submissions SET submitted_at=NOW(), updated_at=NOW()
 		WHERE trans_type=" . db_escape($trans_type) . " AND trans_no=" . db_escape($trans_no));
 

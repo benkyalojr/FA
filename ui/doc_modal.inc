@@ -156,6 +156,43 @@ function ma_doc_mpesa($no)
 
 function ma_doc_can($area) { return $_SESSION['wa_current_user']->can_access_page($area); }
 
+// KRA eTIMS stamp state of an invoice or credit note: array(pill [label, tone], tab html, can restamp), or null when eTIMS is not in use.
+function ma_doc_kra($type, $no, $void)
+{
+    global $path_to_root;
+    if ($type !== ST_SALESINVOICE && $type !== ST_CUSTCREDIT) return null;
+    include_once($path_to_root.'/etims/includes/etims_setup.inc');
+    if (!etims_is_setup()) return null;
+    $k = db_fetch(db_query("SELECT s.status, s.short_url, s.invc_no, s.rcpt_sign, s.intrl_data, s.cur_rcpt_no, s.tot_rcpt_no, s.sdc_date_time, s.stamped_at,
+        t.status task_status, t.attempts, t.max_attempts, t.last_error, t.next_attempt_at
+        FROM ".TB_PREF."etims_submissions s LEFT JOIN ".TB_PREF."bg_tasks t ON t.id=s.bg_task_id
+        WHERE s.trans_type=".(int)$type." AND s.trans_no=".(int)$no, 'eTIMS status'));
+    $on = (bool)get_company_pref('use_etims_stamping');
+
+    if ($k && $k['status'] === 'stamped') {
+        $pill = array(_('KRA stamped'), 'paid');
+        $rcpt = $k['cur_rcpt_no'] ? $k['cur_rcpt_no'].($k['tot_rcpt_no'] ? '/'.$k['tot_rcpt_no'] : '') : '';
+        $facts = array(_('KRA invoice no.') => ma_doc_e($k['invc_no']), _('Receipt counter') => ma_doc_e($rcpt), _('Stamped') => ma_doc_e($k['sdc_date_time'] ?: $k['stamped_at']),
+            _('Signature') => ma_doc_e($k['rcpt_sign']), _('Internal data') => ma_doc_e($k['intrl_data']),
+            _('Verify') => $k['short_url'] ? '<a href="'.ma_doc_e($k['short_url']).'" target="_blank" rel="noopener">'.ma_doc_e($k['short_url']).'</a>' : '');
+        $qr = $k['short_url'] ? '<a href="'.ma_doc_e($k['short_url']).'" target="_blank" rel="noopener"><img alt="KRA QR" width="120" height="120" style="display:block;border-radius:6px" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&amp;data='.urlencode($k['short_url']).'"></a>' : '';
+        $html = '<div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">'.$qr.'<div style="flex:1;min-width:240px">'.ma_doc_facts($facts).'</div></div>';
+        return array($pill, $html, false);
+    }
+    $queued = $k && $k['task_status'] === 'pending';
+    $gave_up = $k && $k['task_status'] === 'failed';
+    $pill = $queued ? array(_('KRA queued'), 'pending') : ($gave_up ? array(_('KRA failed'), 'late') : array($k ? _('KRA pending') : _('Not KRA stamped'), $k ? 'pending' : 'late'));
+    $facts = array(_('Status') => ma_doc_e($queued ? _('Queued for retry') : ($gave_up ? _('Gave up after the maximum attempts') : ($k ? _('Waiting to be stamped') : _('Never submitted')))));
+    if ($k && $k['task_status'] !== null) {
+        $facts[_('Attempts')] = ma_doc_e(((int)$k['attempts']).' / '.((int)$k['max_attempts']));
+        if ($queued) $facts[_('Next retry')] = ma_doc_e($k['next_attempt_at']);
+        $facts[_('Last error')] = ma_doc_e($k['last_error']);
+    }
+    $note = $on ? '' : '<p class="ma-doc-share-note">'.ma_doc_e(_('Stamping is switched off. Turn it on under eTIMS Configuration.')).'</p>';
+    $note .= '<p class="ma-doc-share-note">'.ma_doc_e(_('Failed stamps are retried automatically up to 5 times, with longer waits between attempts. Use Restamp to try again now.')).'</p>';
+    return array($pill, ma_doc_facts($facts).$note, !$void && $on && ma_doc_can('SA_ETIMSVIEW'));
+}
+
 // Returns array('title'=>, 'html'=>) for a document, or array('error'=>).
 function ma_doc_render($type, $no)
 {
@@ -317,6 +354,11 @@ function ma_doc_render($type, $no)
     }
     if (!$void && ma_doc_can('SA_VOIDTRANSACTION') && !is_closed_trans($type, $no))
         $actions[] = ma_doc_action(_('Void'), 'admin/void_transaction.php?filterType='.$type.'&trans_no='.$no, '', 'danger');
+    $kra = ma_doc_kra($type, $no, (bool)$void);
+    if ($kra) {
+        $tabs[] = array(_('KRA eTIMS'), $kra[1]);
+        if ($kra[2]) $actions[] = '<button type="button" class="ma-doc-btn" data-doc-restamp>'.ma_ui_icon('swap').ma_doc_e(_('Restamp')).'</button>';
+    }
     $mp = ($type === ST_SALESINVOICE && !$void) ? ma_doc_mpesa($no) : null;
     if ($mp)
         $actions[] = '<button type="button" class="ma-doc-btn primary" data-doc-mpesa-toggle>'.ma_ui_icon('wallet').ma_doc_e(_('Request M-Pesa')).'</button>';
@@ -327,9 +369,10 @@ function ma_doc_render($type, $no)
 
     $h = '<article class="ma-doc" data-doc-type="'.$type.'" data-doc-no="'.$no.'" data-doc-token="'.ma_doc_e($_SESSION['csrf_token'] ?? '').'">'
         .($ribbon ? '<div class="ma-doc-ribbon '.$ribbon[1].'" role="status">'.ma_doc_e(ma_doc_upper($ribbon[0])).'</div>' : '').'<div class="ma-doc-head"><div><span class="ma-doc-eyebrow">'.ma_doc_e(ma_doc_upper($label)).'</span><h1>'
-        .ma_doc_e($label.' '.($ref !== '' ? $ref : '#'.$no)).'</h1><span class="ma-pill '.$status[1].'">'.ma_doc_e(ma_doc_upper($status[0])).'</span></div></div>';
+        .ma_doc_e($label.' '.($ref !== '' ? $ref : '#'.$no)).'</h1><span class="ma-pill '.$status[1].'">'.ma_doc_e(ma_doc_upper($status[0])).'</span>'
+        .($kra ? ' <span class="ma-pill '.$kra[0][1].'">'.ma_doc_e(ma_doc_upper($kra[0][0])).'</span>' : '').'</div></div>';
     if ($void) $h .= '<div class="ma-doc-void">'.ma_doc_e(sprintf(_('Voided on %s'), sql2date($void['date_']))).($void['memo_'] !== '' ? ' - '.ma_doc_e($void['memo_']) : '').'</div>';
-    $h .= '<div class="ma-doc-summary">'.ma_doc_facts($facts).'<div class="ma-doc-actions">'.implode('', $actions).'</div></div><div class="ma-doc-share" hidden></div>'
+    $h .= '<div class="ma-doc-summary">'.ma_doc_facts($facts).'<div class="ma-doc-actions">'.implode('', $actions).'</div></div><div class="ma-doc-share" hidden></div><div class="ma-doc-share ma-doc-kra-msg" hidden></div>'
         .($mp ? '<div class="ma-doc-mpesa" hidden><div class="ma-doc-mpesa-row"><label>'.ma_doc_e(_('Customer phone')).'<input type="text" data-mpesa-phone value="'.ma_doc_e($mp[0]).'" placeholder="0712345678" inputmode="tel"></label>'
             .'<label>'.ma_doc_e(_('Amount')).'<input type="text" data-mpesa-amount value="'.ma_doc_e(number_format(floor($mp[1]), 0, '.', '')).'" inputmode="numeric"><small>Whole KES only</small></label>'
             .'<button type="button" class="ma-doc-btn primary" data-mpesa-send>'.ma_doc_e(_('Send request')).'</button></div><div class="ma-doc-mpesa-msg" role="status"></div></div>' : '');

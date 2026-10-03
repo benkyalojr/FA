@@ -328,7 +328,8 @@ if ($selected_account != "")
 else
 {
 	echo "<tr><td class='label'>"._("Account Code:")."</td><td>";
-	text_cells(null, 'account_code', null, 15);
+	// text_cells() would emit its own <td> inside this one and break the row.
+	echo "<input type='text' name='account_code' size='15' maxlength='15' value='".html_specials_encode((string)get_post('account_code'))."'> ";
 	submit('gen_code', _("Generate"), true, _("Suggest the next free code in the selected group"), true);
 	echo "</td></tr>\n";
 }

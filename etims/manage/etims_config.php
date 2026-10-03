@@ -138,8 +138,8 @@ echo '<div class="ma-cfg-grid">';
 
 // Credentials + environment (one Save)
 echo '<section class="ma-panel ma-cfg-card"><div class="ma-panel-head"><h2>'.$e(_('Stanbest / KRA eTIMS Credentials')).'</h2></div><div class="ma-cfg-body">'
-	.'<label>'.$e(_('PIN')).'<input type="text" name="etims_pin" maxlength="20" value="'.$e(get_post('etims_pin') !== null ? get_post('etims_pin') : ($cfg ? $cfg['pin'] : '')).'" placeholder="A000000000X"></label>'
-	.'<label>'.$e(_('Username')).'<input type="text" name="etims_username" maxlength="100" value="'.$e(get_post('etims_username') !== null ? get_post('etims_username') : ($cfg ? $cfg['username'] : '')).'" autocomplete="off"></label>'
+	.'<label>'.$e(_('PIN')).'<input type="text" name="etims_pin" maxlength="20" value="'.$e(get_post('etims_pin', null) !== null ? get_post('etims_pin', null) : ($cfg ? $cfg['pin'] : '')).'" placeholder="A000000000X"></label>'
+	.'<label>'.$e(_('Username')).'<input type="text" name="etims_username" maxlength="100" value="'.$e(get_post('etims_username', null) !== null ? get_post('etims_username', null) : ($cfg ? $cfg['username'] : '')).'" autocomplete="off"></label>'
 	.'<label>'.$e(_('Password')).'<input type="password" name="etims_password" maxlength="255" autocomplete="new-password" placeholder="'.$e($cfg && $cfg['password'] !== '' ? _('Leave blank to keep the stored password') : _('Required on first save')).'"></label>'
 	.'<p class="ma-cfg-hint">'.$e($cfg && $cfg['password'] !== '' ? sprintf(_('Stored password: %s.'), etims_mask_secret($cfg['password'])) : _('No password stored yet.')).'</p></div></section>';
 
@@ -147,8 +147,8 @@ echo '<section class="ma-panel ma-cfg-card"><div class="ma-panel-head"><h2>'.$e(
 	.'<label class="ma-cfg-switch"><input type="checkbox" name="etims_is_live" value="1"'.(($cfg && $cfg['is_live']) || check_value('etims_is_live') ? ' checked' : '').'><span class="ma-cfg-track" aria-hidden="true"></span>'
 	.'<span><strong>'.$e(_('Live mode')).'</strong><small>'.$e(_('Off = Sandbox. Turn on only once Stanbest has issued production credentials.')).'</small></span></label>'
 	.'<label>'.$e(_('Sandbox Base URL')).'<input type="text" value="'.$e($cfg ? $cfg['sandbox_base_url'] : '').'" readonly></label>'
-	.'<label>'.$e(_('Live Base URL')).'<input type="text" name="etims_live_url" maxlength="255" value="'.$e(get_post('etims_live_url') !== null ? get_post('etims_live_url') : ($cfg ? $cfg['live_base_url'] : '')).'" placeholder="https://"></label>'
-	.'<label class="ma-cfg-short">'.$e(_('Branch ID (bhfId)')).'<input type="text" name="etims_bhf_id" maxlength="2" value="'.$e(get_post('etims_bhf_id') !== null ? get_post('etims_bhf_id') : ($cfg ? $cfg['bhf_id'] : '00')).'"></label>'
+	.'<label>'.$e(_('Live Base URL')).'<input type="text" name="etims_live_url" maxlength="255" value="'.$e(get_post('etims_live_url', null) !== null ? get_post('etims_live_url', null) : ($cfg ? $cfg['live_base_url'] : '')).'" placeholder="https://"></label>'
+	.'<label class="ma-cfg-short">'.$e(_('Branch ID (bhfId)')).'<input type="text" name="etims_bhf_id" maxlength="2" value="'.$e(get_post('etims_bhf_id', null) !== null ? get_post('etims_bhf_id', null) : ($cfg ? $cfg['bhf_id'] : '00')).'"></label>'
 	.'</div></section>';
 echo '</div>';
 

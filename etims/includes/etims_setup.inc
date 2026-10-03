@@ -27,3 +27,15 @@ function etims_require_setup()
 	end_page();
 	return false;
 }
+
+// eTIMS is "set up" once the tables exist and the Stanbest credentials are saved. Screens that only make sense
+// with eTIMS (the stamp badge, tab and Restamp button on documents) check this, so they stay hidden otherwise.
+function etims_is_setup()
+{
+	global $path_to_root;
+	if (!etims_schema_ready())
+		return false;
+	include_once($path_to_root . '/etims/includes/db/etims_config_db.inc');
+	$cfg = etims_get_config();
+	return $cfg && $cfg['pin'] !== '' && $cfg['username'] !== '' && $cfg['password'] !== '';
+}

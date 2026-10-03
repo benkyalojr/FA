@@ -47,6 +47,35 @@ if (!empty($SysPrefs->prefs['company_logo_on_views']))
 display_heading(sprintf($myrow['prep_amount'] > 0 ? (
 	$paym['days_before_due']>=0 ? _("FINAL INVOICE #%d") : _("PREPAYMENT INVOICE #%d")) : _("SALES INVOICE #%d"),$trans_id));
 
+// KRA eTIMS stamp status, so it is visible on the invoice itself.
+include_once($path_to_root . "/etims/includes/etims_setup.inc");
+if (etims_is_setup()) {
+	$ke = function ($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); };
+	$kra = db_fetch(db_query("SELECT status, short_url, invc_no, rcpt_sign, intrl_data, cur_rcpt_no, tot_rcpt_no, sdc_date_time, stamped_at
+		FROM ".TB_PREF."etims_submissions WHERE trans_type=".ST_SALESINVOICE." AND trans_no=".db_escape($trans_id), 'eTIMS status'));
+	$stamping_on = (bool)get_company_pref('use_etims_stamping');
+	{
+		echo "<div style='margin:10px auto;width:95%;padding:12px 16px;border:1px solid var(--color-border,#ccc);border-radius:8px;display:flex;gap:16px;align-items:center;flex-wrap:wrap'>";
+		if ($kra && $kra['status'] === 'stamped') {
+			if ($kra['short_url'])
+				echo "<a href='".$ke($kra['short_url'])."' target='_blank' rel='noopener'><img alt='KRA QR' width='96' height='96' style='display:block' src='https://api.qrserver.com/v1/create-qr-code/?size=192x192&amp;data=".urlencode($kra['short_url'])."'></a>";
+			echo "<div><span class='ma-pill paid' style='font-size:12px;padding:5px 12px'>&#10003; ".$ke(_('KRA eTIMS stamped'))."</span>";
+			$d = array(_('Invoice no.') => $kra['invc_no'], _('Receipt no.') => $kra['cur_rcpt_no'] ? $kra['cur_rcpt_no'].($kra['tot_rcpt_no'] ? '/'.$kra['tot_rcpt_no'] : '') : '',
+				_('Stamped') => $kra['sdc_date_time'] ?: $kra['stamped_at'], _('Signature') => $kra['rcpt_sign'], _('Internal data') => $kra['intrl_data']);
+			echo "<table style='margin-top:8px;font-size:12px'>";
+			foreach ($d as $k => $v)
+				if ($v) echo "<tr><td style='padding:1px 14px 1px 0;opacity:.7'>".$ke($k)."</td><td style='word-break:break-all'><b>".$ke($v)."</b></td></tr>";
+			if ($kra['short_url']) echo "<tr><td style='padding:1px 14px 1px 0;opacity:.7'>".$ke(_('Verify'))."</td><td><a href='".$ke($kra['short_url'])."' target='_blank' rel='noopener'>".$ke($kra['short_url'])."</a></td></tr>";
+			echo "</table></div>";
+		} elseif ($kra) {
+			echo "<span class='ma-pill pending' style='font-size:12px;padding:5px 12px'>".$ke(sprintf(_('KRA eTIMS: %s - not stamped yet'), $kra['status']))."</span>";
+		} else {
+			echo "<span class='ma-pill late' style='font-size:12px;padding:5px 12px'>".$ke(_('Not KRA stamped'))."</span>";
+		}
+		echo "</div>";
+	}
+}
+
 echo "<br>";
 start_table(TABLESTYLE2, "width='95%'");
 echo "<tr valign=top><td>"; // outer table

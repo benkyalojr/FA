@@ -32,14 +32,20 @@ start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 echo "<td>" . _("Status:") . "</td><td>";
-echo array_selector('show_status', get_post('show_status'), $statuses);
+echo array_selector('show_status', get_post('show_status'), $statuses, array('select_submit' => true));
 echo "</td>";
 echo "<td>" . _("Item:") . "</td><td>";
-text_cells(null, 'show_search', get_post('show_search'), 20, 40, null, '', '', "placeholder='" . _('name or code') . "'");
+// text_cells() emits its own <td>, which would nest inside this one.
+echo "<input type='text' name='show_search' size='20' maxlength='40' value='" . html_specials_encode((string)get_post('show_search')) . "' placeholder='" . _('name or code') . "'>";
 echo "</td>";
 submit_cells('RefreshInquiry', _("Show"), '', _('Refresh'), 'default');
 end_row();
 end_table();
+
+// Show is an AJAX submit: only the regions activated here are redrawn.
+global $Ajax;
+if (get_post('RefreshInquiry') || list_updated('show_status')) $Ajax->activate('table_');
+div_start('table_');
 
 $where = array('s.inactive = 0');
 $status = get_post('show_status');
@@ -86,7 +92,7 @@ $result = db_query($sql, 'Cannot list eTIMS item mappings');
 
 start_table(TABLESTYLE, "width=98%");
 table_header(array(_("Stock Item"), _("KRA Item Code"), _("Classification"), _("Item Type"),
-	_("Origin"), _("Category"), _("Tax Type"), _("Pkg Unit"), _("Qty Unit"), _("Status"), _("Registered")));
+	_("Origin"), _("Category"), _("Tax Type"), _("Pkg Unit"), _("Qty Unit"), _("Status"), _("Registered"), ""));
 
 $k = 0;
 $count = 0;
@@ -111,6 +117,7 @@ while ($row = db_fetch($result)) {
 		label_cell(_('Not registered'));
 
 	label_cell(html_specials_encode((string)$row['registered_at']));
+	label_cell("<a href='" . $path_to_root . "/inventory/etims_item.php?stock_id=" . urlencode($row['stock_id']) . "'>" . ((int)$row['is_registered'] === 1 ? _('Edit') : _('Map & register')) . "</a>", "nowrap");
 	end_row();
 }
 end_table(1);
@@ -118,8 +125,10 @@ end_table(1);
 if (!$count)
 	display_note(_('No stock items match these filters.'));
 
+div_end();
+
 end_form();
 
-display_note(_('Read-only. Edit classification/tax-type settings and register an item with KRA from its own eTIMS Item Registration tab on Item Entry (Inventory > Items).'));
+display_note(_('Read-only. Use the link on each row to set classification and tax type and to register the item with KRA.'));
 
 end_page();
